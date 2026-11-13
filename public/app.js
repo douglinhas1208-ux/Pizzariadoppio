@@ -136,7 +136,6 @@
     });
     if($('mobile-total')) $('mobile-total').textContent=s.total!==null?money(s.total):'Conferir pedido →';
   }
-  }
   function renderCartContents() {
     const s = totals();
     const items = cart.length ? `<div class="cart-items">${cart.map(i => `<div class="cart-item"><div class="cart-item-main"><div class="cart-item-name">${esc(formatName(i))}</div><div class="cart-item-price">${formatPrice(itemPrice(i))}${i.note?' · valor com alterações a confirmar':''}</div>${i.note?`<p class="item-note"><b>Obs.:</b> ${esc(i.note)}</p>`:''}<button class="edit-item-note" data-edit-note="${esc(i.key)}" type="button">✎ ${i.note?'Editar observação':'Adicionar observação'}</button></div><div class="qty-controls"><button type="button" data-qty="${esc(i.key)}" data-step="-1" aria-label="Diminuir quantidade de ${esc(formatName(i))}">−</button><span>${i.qty}</span><button type="button" data-qty="${esc(i.key)}" data-step="1" aria-label="Aumentar quantidade de ${esc(formatName(i))}">+</button></div></div>`).join('')}</div>`
