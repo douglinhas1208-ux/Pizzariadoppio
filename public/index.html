@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#191715">
+  <meta name="description" content="Conheça o cardápio da Doppio Pizzas, no Jardim Brasília. Escolha seus sabores e envie seu pedido pelo WhatsApp.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Doppio Pizzas | Sabor em dobro">
+  <meta property="og:description" content="Conheça os sabores da Doppio Pizzas e monte seu pedido pelo WhatsApp. Jardim Brasília, São Paulo.">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <title>Doppio Pizzas • Cardápio Online</title>
+  <link rel="preload" href="assets/calabresa.webp" as="image" fetchpriority="high">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="config.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#inicio" aria-label="Doppio Pizzas, início"><span class="brand-stamp" aria-hidden="true">D<span>•</span></span><span class="brand-text"><strong>DOPPIO</strong><small>PIZZAS</small></span></a>
+      <nav class="nav-links" aria-label="Navegação principal"><a href="#cardapio">Cardápio</a><a href="#como-pedir">Como pedir</a><a href="#informacoes">Informações</a></nav>
+      <a class="header-contact" id="header-wa" href="https://wa.me/5511959315869" target="_blank" rel="noopener noreferrer"><span class="whatsapp-mini">✳</span> Fale conosco <span aria-hidden="true">↗</span></a>
+      <button class="header-cart" id="header-cart" type="button" aria-label="Abrir carrinho de compras"><svg class="icon-cart" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.4 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/></svg><span class="header-cart-count" id="header-count">0</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-noise"></div>
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="sparkle">✦</span> <span id="hero-location">JARDIM BRASÍLIA · SÃO PAULO</span></div>
+          <h1>Mais que pizza.<br><em>Sabor em</em> <span>dobro.</span></h1>
+          <p>Os clássicos que todo mundo ama: escolha seu sabor favorito e monte seu pedido.</p>
+          <div class="hero-actions"><a class="button button-hot" href="#cardapio">Explorar o cardápio <span>↗</span></a><a class="button button-link" href="#como-pedir">Como funciona <span>→</span></a></div>
+          <div class="hero-facts"><div><strong id="hero-count">04</strong><span>Sabores no cardápio</span></div><div><strong id="hero-radius">15 km</strong><span>Área de entrega*</span></div><div><strong id="hero-eta">~40 min</strong><span>Prazo estimado</span></div></div>
+        </div>
+        <div class="hero-visual"><div class="hero-glow"></div><div class="hero-image-wrap"><img src="assets/calabresa.webp" alt="Pizza de calabresa dourada, com cebola" width="1536" height="1024"></div><div class="hero-sticker"><span>✦</span><strong>Uma fatia<br>puxa outra.</strong></div><div class="hero-outline">DOPPIO</div></div>
+      </div>
+      <div class="hero-baseline container"><span>FEITA PARA A SUA FOME</span><span>↓ ROLE PARA CONHECER</span></div>
+    </section>
+
+    <div class="ticker" aria-label="Destaques"><div class="ticker-inner"><span>SABORES FEITOS PRA VOCÊ</span><b>✳</b><span>PEÇA PELO WHATSAPP</span><b>✳</b><span>MEIO A MEIO DISPONÍVEL</span><b>✳</b><span>SABORES FEITOS PRA VOCÊ</span><b>✳</b><span>PEÇA PELO WHATSAPP</span></div></div>
+
+    <section class="menu-section" id="cardapio">
+      <div class="container">
+        <div class="section-top"><div><span class="section-kicker">01 / NOSSO CARDÁPIO</span><h2>Escolha o seu <em>próximo sabor.</em></h2><p id="menu-description">Conheça nossos quatro sabores de estreia. Em breve, mais novidades por aqui.</p></div><div class="menu-count"><span>05</span><small>OPÇÕES<br>DO CARDÁPIO</small></div></div>
+        <div class="menu-toolbar"><div class="filter-group" role="group" aria-label="Filtrar sabores"><button class="filter active" data-filter="Todos" type="button" aria-pressed="true">Todos <span id="all-count">04</span></button><button class="filter" data-filter="Tradicionais" type="button" aria-pressed="false">Tradicionais</button><button class="filter" data-filter="Especiais" type="button" aria-pressed="false">Especiais</button></div><span class="menu-note" id="menu-note"><span class="dot"></span> Preços e frete: em definição</span></div>
+        <div class="menu-layout"><div class="products-grid" id="products" aria-live="polite"></div><aside class="cart-aside" aria-label="Seu pedido"><div class="cart-sticky" id="cart-desktop"></div></aside></div>
+      </div>
+    </section>
+
+    <section class="steps-section" id="como-pedir"><div class="container"><div class="steps-heading"><span class="section-kicker">02 / É SIMPLES ASSIM</span><h2>Seu pedido em <em>3 passos.</em></h2></div><div class="steps-grid"><div class="step"><span class="step-number">01</span><div class="step-icon">◫</div><h3>Escolha os sabores</h3><p>Veja as opções e adicione suas pizzas ao pedido.</p></div><div class="step"><span class="step-number">02</span><div class="step-icon">⌁</div><h3>Confira os detalhes</h3><p>Personalize cada pizza, revise as observações e informe os dados da entrega.</p></div><div class="step"><span class="step-number">03</span><div class="step-icon">↗</div><h3>Envie pelo WhatsApp</h3><p>Confirmamos valores, entrega e disponibilidade no atendimento.</p></div></div></div></section>
+
+    <section class="info-section" id="informacoes"><div class="container info-layout"><div><span class="section-kicker">03 / INFORMAÇÕES</span><h2>Onde o sabor<br><em>encontra você.</em></h2><p class="info-intro" id="info-intro">Atendemos a região do Jardim Brasília, em São Paulo. Confira nossos detalhes antes de pedir.</p><a class="button button-hot" id="info-wa" href="https://wa.me/5511959315869" target="_blank" rel="noopener noreferrer">Conversar no WhatsApp <span>↗</span></a></div><div class="info-list"><div><span>01</span><div><small>LOCALIZAÇÃO</small><strong id="info-location">Jardim Brasília, São Paulo</strong></div></div><div><span>02</span><div><small>ATENDIMENTO</small><strong id="open-days">Sábados e domingos</strong></div></div><div><span>03</span><div><small>ENTREGAS</small><strong id="delivery-details">Até 15 km • Frete a confirmar</strong></div></div><div><span>04</span><div><small>PAGAMENTO</small><strong id="payments">Crédito · Débito · Pix</strong></div></div></div></div></section>
+  </main>
+
+  <footer class="footer"><div class="container"><div class="footer-top"><a class="brand" href="#inicio"><span class="brand-stamp" aria-hidden="true">D<span>•</span></span><span class="brand-text"><strong>DOPPIO</strong><small>PIZZAS</small></span></a><span>Pizza boa é pizza compartilhada.</span></div><div class="footer-bottom"><small>© <span id="year">2026</span> Doppio Pizzas. Todos os direitos reservados.</small><small id="draft-note">Prévia do cardápio · Preços, frete e horário a confirmar.</small></div></div></footer>
+
+  <div class="mobile-cart-bar" id="mobile-cart-bar"><button id="mobile-cart-button" class="mobile-cart-button" type="button"><span class="mobile-basket"><svg class="icon-cart" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.4 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/></svg> <b id="mobile-count">0</b></span><span>Ver carrinho</span><span id="mobile-total">Confira os itens →</span></button></div>
+
+  <div class="overlay" id="overlay" hidden></div>
+  <div class="cart-drawer" id="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" aria-hidden="true" hidden><div class="drawer-heading"><div><span class="section-kicker">RESUMO</span><h2 id="drawer-title" class="drawer-cart-title"><svg class="icon-cart" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.4 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/></svg> Meu carrinho</h2></div><button class="close-icon" id="close-drawer" type="button" aria-label="Fechar pedido">×</button></div><div id="cart-mobile"></div></div>
+  <div class="half-modal" id="half-modal" role="dialog" aria-modal="true" aria-labelledby="half-title" aria-hidden="true" hidden><div class="half-modal-heading"><div><span class="section-kicker">ESCOLHA DOIS SABORES</span><h2 id="half-title">Meio a meio</h2></div><button class="close-icon" id="close-half" type="button" aria-label="Fechar">×</button></div><p>Selecione os dois sabores. Preço calculado pela média quando os valores forem definidos.</p><label for="half-one">Primeira metade</label><select id="half-one"></select><label for="half-two">Segunda metade</label><select id="half-two"></select><label for="half-notes">Observações dessa pizza (opcional)</label><textarea id="half-notes" maxlength="180" rows="2" placeholder="Ex.: Trocar mussarela por Catupiry em uma metade..."></textarea><p class="half-note-hint">Trocas e acréscimos sujeitos à confirmação da pizzaria.</p><div class="half-price" id="half-price">Preço a confirmar</div><button id="add-half" type="button" class="button button-hot full-button">Adicionar ao pedido <svg class="icon-cart" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.4 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/></svg></button></div>
+  <div class="customize-modal" id="customize-modal" role="dialog" aria-modal="true" aria-labelledby="customize-title" aria-hidden="true" hidden>
+    <div class="half-modal-heading"><div><span class="section-kicker">DO SEU JEITO</span><h2 id="customize-title">Personalizar pizza</h2></div><button class="close-icon" id="close-customize" type="button" aria-label="Fechar personalização">×</button></div>
+    <p class="customize-product" id="customize-product"></p>
+    <label class="customize-label" for="customize-notes">O que você deseja alterar? <span class="optional-label">(opcional)</span></label>
+    <div class="suggestion-list" id="customize-suggestions" aria-label="Sugestões de alteração"></div>
+    <textarea id="customize-notes" maxlength="180" rows="3" placeholder="Ex.: Trocar mussarela por Catupiry, sem cebola, retirar azeitonas..."></textarea>
+    <div class="customize-counter"><span>As alterações podem modificar o preço.</span><span id="customize-length">0/180</span></div>
+    <p class="customize-warning">As trocas e ingredientes extras são solicitações. A pizzaria confirma disponibilidade e eventuais acréscimos pelo WhatsApp antes de aceitar o pedido.</p>
+    <button id="save-customize" type="button" class="button button-hot full-button">Adicionar ao pedido <svg class="icon-cart" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.4 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/></svg></button>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

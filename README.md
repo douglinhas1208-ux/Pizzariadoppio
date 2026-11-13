@@ -1,5 +1,9 @@
 # Doppio Pizzas — Cardápio digital
 
-Site do catálogo da pizzaria. Publicação automática via Cloudflare Workers no projeto `cardapio`. Os preços e o frete ainda estão a confirmar.
+Site público: https://cardapio.doppio-pizzas.workers.dev/
 
-Arquivos web dentro de `public/`, deploy com `npx wrangler deploy`.
+Projeto Cloudflare Workers: `cardapio`. Branch: `main`. Deploy: `npx wrangler deploy`.
+
+Arquivos do site ficam na pasta `public/`, incluindo as imagens reais. Personalize o catálogo alterando `public/config.js`, incluindo preços, produtos, frete, horários e formas de pagamento. Enquanto os preços estiverem sem definição, o pedido pelo WhatsApp solicita confirmação, sem cobrança online.
+
+Não registre chaves, tokens nem dados de clientes neste repositório.
