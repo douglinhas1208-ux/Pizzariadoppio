@@ -196,8 +196,7 @@
       `*Endereço:* ${form.address.trim()||'A informar'}`,
       `*Pagamento:* ${form.payment}`,
       `*Observações gerais:* ${form.notes.trim()||'Nenhuma'}`,'',
-      '_Trocas, retirada e acréscimos de ingredientes são solicitações. Confirme disponibilidade e eventuais valores extras antes de aceitar._',
-      `_Confirme cobertura até ${cfg.delivery?.radiusKm||15} km, valores, funcionamento e disponibilidade antes de aceitar o pedido._`
+      '_🍕 A Doppio Pizzas confirmará os valores, o frete, a disponibilidade e as alterações de ingredientes antes de finalizar o pedido._'
     ];
     window.open(whatsapp(lines.join('\n')), '_blank', 'noopener,noreferrer');
   }
