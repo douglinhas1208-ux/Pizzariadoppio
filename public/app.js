@@ -57,7 +57,7 @@
   const extraFee = Number(cfg.delivery?.extraKmFee)||1;
   const numberKm = v => {
     const str=String(v??'').trim().replace(',', '.');
-    if (!/^\\d+(?:\\.\\d{1,2})?$/.test(str)) return null;
+    if (!/^[0-9]+(?:[.][0-9]{1,2})?$/.test(str)) return null;
     const n=Number(str);
     return Number.isFinite(n)&&n>=0 ? n : null;
   };
