@@ -33,9 +33,9 @@ window.DOPPIO_CONFIG = {
     requireDeliveryAddress: true // impede enviar pedido sem endereço
   },
   products: [
-    {id:'frango', name:'Frango com Catupiry', description:'Frango e Catupiry.', category:'Clássicas', image:'assets/frango.webp', price:null, available:true, tag:'Clássica'},
-    {id:'brocolis', name:'Brócolis com Bacon', description:'Brócolis, bacon e Catupiry.', category:'Clássicas', image:'assets/brocolis.webp', price:null, available:true, tag:'Clássica'},
-    {id:'calabresa', name:'Calabresa', description:'Calabresa e cebola.', category:'Clássicas', image:'assets/calabresa.webp', price:null, available:true, tag:'Clássica'},
-    {id:'mussarela', name:'Mussarela', description:'Mussarela, tomate e azeitonas.', category:'Clássicas', image:'assets/mussarela.webp', price:null, available:true, tag:'Clássica'}
+    {id:'frango', name:'Frango com Catupiry', description:'Frango e Catupiry.', ingredients:['Massa','Molho de tomate','Frango','Catupiry','Azeitonas'], category:'Clássicas', image:'assets/frango.webp', price:null, available:true, tag:'Clássica'},
+    {id:'brocolis', name:'Brócolis com Bacon', description:'Brócolis, bacon e Catupiry.', ingredients:['Massa','Molho de tomate','Brócolis','Bacon','Catupiry'], category:'Clássicas', image:'assets/brocolis.webp', price:null, available:true, tag:'Clássica'},
+    {id:'calabresa', name:'Calabresa', description:'Calabresa e cebola.', ingredients:['Massa','Molho de tomate','Calabresa','Cebola','Azeitonas'], category:'Clássicas', image:'assets/calabresa.webp', price:null, available:true, tag:'Clássica'},
+    {id:'mussarela', name:'Mussarela', description:'Mussarela, tomate e azeitonas.', ingredients:['Massa','Molho de tomate','Mussarela','Tomate','Azeitonas'], category:'Clássicas', image:'assets/mussarela.webp', price:null, available:true, tag:'Clássica'}
   ]
 };
