@@ -79,8 +79,8 @@
       <p class="half-card-caption">Preço pela média dos sabores, sujeito à confirmação.</p></div></article>` : '';
     $('products').innerHTML = displayed.map(p => `<article class="pizza-card">
       <div class="pizza-image"><img src="${esc(p.image)}" alt="Pizza de ${esc(p.name)}" loading="lazy" decoding="async" width="560" height="390"><span class="pizza-tag">${esc(p.tag||p.category||'Sabor')}</span></div>
-      <div class="pizza-body"><span class="pizza-category">${esc(p.category||'Outros')}</span><h3>${esc(p.name)}</h3><p>${esc(p.description)}</p>
-      ${Array.isArray(p.ingredients)&&p.ingredients.length?`<div class="pizza-ingredients"><span class="pizza-ingredients-title">Ingredientes</span><p>${p.ingredients.map(esc).join(' · ')}</p></div>`:''}
+      <div class="pizza-body"><span class="pizza-category">${esc(p.category||'Outros')}</span><h3>${esc(p.name)}</h3>
+      <p class="pizza-ingredients-line" aria-label="Ingredientes: ${esc(Array.isArray(p.ingredients)?p.ingredients.join(', '):p.description)}">${Array.isArray(p.ingredients)&&p.ingredients.length?p.ingredients.map(esc).join(' · '):esc(p.description)}</p>
       <div class="pizza-bottom"><span class="price ${validPrice(p.price)?'':'price-pending'}">${validPrice(p.price)?money(p.price):'Preço a confirmar'}</span><button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="Adicionar ${esc(p.name)} ao carrinho">${cartIcon} Adicionar</button></div><button type="button" class="customize-link" data-customize="${esc(p.id)}">✎ Personalizar / trocar ingrediente</button></div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
     document.querySelector('.menu-count span').textContent = String(products.length + (halfEnabled ? 1 : 0)).padStart(2,'0');
     renderFilters();
