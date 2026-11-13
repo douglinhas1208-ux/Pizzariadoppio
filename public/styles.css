@@ -111,3 +111,17 @@
 .pizza-card .pizza-image > img[src$="calabresa-real.avif"] { transform: scale(1.72); transform-origin: center center; object-position: center; }
 .pizza-card:hover .pizza-image > img[src$="frango-real.avif"] { transform: scale(1.86); }
 .pizza-card:hover .pizza-image > img[src$="calabresa-real.avif"] { transform: scale(1.78); }
+
+
+/* V11 — Calculadora de frete por distância (informada pelo cliente) */
+.delivery-calculator{border:1px solid #f1d8bf;background:#fff8f0;border-radius:13px;padding:13px 12px;display:flex;flex-direction:column;gap:7px;margin:5px 0 6px}
+.order-form .delivery-calculator label{color:#4e3828;font-weight:850;font-size:.76rem;margin:0}
+.distance-optional{font-weight:500;font-size:.67rem;color:#88796b}
+.delivery-distance-field{display:flex;gap:9px;align-items:center}
+.order-form .delivery-distance-field input{flex:1;min-width:0;background:white;font-size:.9rem}
+.delivery-distance-field>span{color:#685142;font-size:.8rem;font-weight:800}
+.delivery-rule{color:#765d4b;font-size:.69rem;line-height:1.55;margin:0}
+.delivery-estimate{margin:0;border-radius:8px;background:#ffebd8;color:#8a431b;padding:9px 10px;font-size:.76rem;font-weight:800;line-height:1.45}
+.delivery-estimate.delivery-warning{background:#ffe6e6;color:#9b2424}
+.order-form .delivery-calculator .delivery-hint{font-size:.68rem;color:#89715d;line-height:1.5;margin:0}
+@media(max-width:600px){.delivery-calculator{padding:11px 10px}.delivery-rule{font-size:.67rem}}

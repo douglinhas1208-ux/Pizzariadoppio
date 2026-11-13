@@ -48,7 +48,22 @@
     const stored = JSON.parse(localStorage.getItem('doppio-cart-v2') || localStorage.getItem('doppio-cart-v1') || '[]');
     if (Array.isArray(stored)) cart = stored.map(normalizeItem).filter(Boolean).slice(0,40);
   } catch (_) { /* O carrinho funciona mesmo se o armazenamento estiver indisponível. */ }
-  const form = {name:'', address:'', payment:(cfg.business.paymentMethods||[])[0]||'A combinar', notes:''};
+  const form = {name:'', address:'', distanceKm:'', payment:(cfg.business.paymentMethods||[])[0]||'A combinar', notes:''};
+  // Sem endereço de origem e serviço de rotas, a distância é informada pelo cliente.
+  // O valor é uma estimativa; a equipe deve confirmar a quilometragem por ruas.
+  const maxKm = Number(cfg.delivery?.radiusKm)||10;
+  const baseKm = Number(cfg.delivery?.includedKm)||5;
+  const baseFee = Number(cfg.delivery?.minFee)||5;
+  const extraFee = Number(cfg.delivery?.extraKmFee)||1;
+  const numberKm = v => {
+    const str=String(v??'').trim().replace(',', '.');
+    if (!/^\\d+(?:\\.\\d{1,2})?$/.test(str)) return null;
+    const n=Number(str);
+    return Number.isFinite(n)&&n>=0 ? n : null;
+  };
+  const displayKm = n => new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2}).format(n);
+  const deliveryFee = km => km===null || km>maxKm ? null
+    : baseFee + Math.max(0,Math.ceil(km-baseKm-1e-9))*extraFee;
   const halfEnabled = cfg.options?.halfHalfEnabled !== false && products.length >= 2;
   const categories = ['Todos', ...new Set(products.map(p => p.category || 'Outros')), ...(halfEnabled ? ['Meio a meio'] : [])];
   let filter = 'Todos';
@@ -90,10 +105,37 @@
     const pending = cart.some(i => !validPrice(itemPrice(i)));
     const customized = cart.some(i => !!i.note);
     const subtotal = cart.reduce((s,i) => s + (itemPrice(i) ?? 0)*i.qty, 0);
-    let fee = cfg.delivery?.fee;
-    if (!pending && validPrice(fee) && validPrice(cfg.delivery?.freeFrom) && subtotal >= cfg.delivery.freeFrom) fee = 0;
+    const rawKm=form.distanceKm.trim();
+    const km=rawKm ? numberKm(rawKm) : null;
+    const invalidKm=!!rawKm && km===null;
+    const outOfArea=km!==null && km>maxKm;
+    const fee=invalidKm ? null : deliveryFee(km);
     const total = cart.length && !pending && !customized && validPrice(fee) ? subtotal + fee : null;
-    return {count,pending,customized,subtotal,fee,total};
+    return {count,pending,customized,subtotal,fee,total,km,invalidKm,outOfArea};
+  }
+  function deliveryPreview(s) {
+    if(s.invalidKm) return 'Distância inválida. Exemplo: 5,5 km.';
+    if(s.outOfArea) return `Fora da área de entrega (máximo de ${maxKm} km).`;
+    if(s.km===null) return 'Informe a distância aproximada para calcular o frete.';
+    return `Frete estimado: ${money(s.fee)} para ${displayKm(s.km)} km · sujeito à confirmação.`;
+  }
+  function updateDeliveryLive() {
+    const s=totals();
+    document.querySelectorAll('[data-delivery-preview]').forEach(el=>{
+      el.textContent=deliveryPreview(s);
+      el.classList.toggle('delivery-warning',s.invalidKm||s.outOfArea);
+    });
+    document.querySelectorAll('[data-delivery-fee]').forEach(el=>{
+      el.textContent=s.outOfArea?'Fora da área':s.invalidKm?'Distância inválida':formatPrice(s.fee);
+    });
+    document.querySelectorAll('[data-delivery-label]').forEach(el=>{
+      el.textContent=validPrice(s.fee)?'Frete estimado':'Taxa de entrega';
+    });
+    document.querySelectorAll('[data-order-total]').forEach(el=>{
+      el.textContent=s.total===null?'A confirmar':money(s.total);
+    });
+    if($('mobile-total')) $('mobile-total').textContent=s.total!==null?money(s.total):'Conferir pedido →';
+  }
   }
   function renderCartContents() {
     const s = totals();
@@ -101,13 +143,19 @@
       : '<div class="cart-empty"><span class="cart-empty-icon">🍕</span><b>Seu pedido começa aqui.</b><p>Escolha uma pizza e monte seu pedido.</p></div>';
     const summary = cart.length ? `<div class="cart-line"></div>
       <div class="summary-row"><span>${s.pending?'Parcial dos sabores com preço':s.customized?'Subtotal base estimado':'Subtotal'}</span><strong>${s.pending && !s.subtotal?'A confirmar':money(s.subtotal)}</strong></div>
-      <div class="summary-row"><span>Taxa de entrega</span><strong>${formatPrice(s.fee)}</strong></div>
-      <div class="summary-row summary-total"><span>Total estimado</span><strong>${s.total===null?'A confirmar':money(s.total)}</strong></div>
-      <div class="cart-pending">${s.pending||!validPrice(s.fee)?'Preços e/ou frete em definição. A equipe confirma o valor antes de aceitar o pedido.':s.customized?'As alterações solicitadas podem gerar acréscimos. A pizzaria confirma o total no WhatsApp.':'O valor e a disponibilidade serão confirmados no WhatsApp.'}</div>` : '';
+      <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete estimado':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':s.invalidKm?'Distância inválida':formatPrice(s.fee)}</strong></div>
+      <div class="summary-row summary-total"><span>Total estimado</span><strong data-order-total>${s.total===null?'A confirmar':money(s.total)}</strong></div>
+      <div class="cart-pending">${s.outOfArea?'Esta distância ultrapassa o limite de entrega.':s.invalidKm?'Digite uma distância válida para calcular o frete.':s.km===null?'Informe os quilômetros para estimar o frete. Os preços das pizzas ainda serão confirmados.':s.pending?'Frete estimado pela distância informada. Preços das pizzas ainda a confirmar.':s.customized?'O frete foi estimado; alterações de ingredientes e valor final serão confirmados no WhatsApp.':'O frete e a disponibilidade serão confirmados no WhatsApp.'}</div>` : '';
     const fields = cart.length ? `<form class="order-form" onsubmit="return false">
       <label for="{prefix}-name">Seu nome <span class="required-mark">*</span></label><input id="{prefix}-name" data-field="name" autocomplete="name" maxlength="70" placeholder="Como podemos chamar você?" value="${esc(form.name)}" required>
       <label for="{prefix}-address">Endereço de entrega <span class="required-mark">*</span></label><textarea id="{prefix}-address" data-field="address" rows="3" maxlength="240" placeholder="Rua, número, bairro, cidade e referência" required>${esc(form.address)}</textarea>
-      <p class="delivery-hint">Entregas em até ${esc(cfg.delivery?.radiusKm||15)} km, sujeitas à confirmação de cobertura e frete.</p>
+      <div class="delivery-calculator">
+        <label for="{prefix}-distanceKm">Distância aproximada da entrega (km) <span class="distance-optional">opcional</span></label>
+        <div class="delivery-distance-field"><input id="{prefix}-distanceKm" data-field="distanceKm" type="text" inputmode="decimal" autocomplete="off" maxlength="8" placeholder="Ex.: 6,2" value="${esc(form.distanceKm)}" aria-describedby="{prefix}-distance-rule"><span>km</span></div>
+        <p class="delivery-rule" id="{prefix}-distance-rule">Até ${baseKm} km: ${money(baseFee)} · Depois: +${money(extraFee)} por km iniciado · Limite: ${maxKm} km.</p>
+        <p class="delivery-estimate ${s.outOfArea||s.invalidKm?'delivery-warning':''}" data-delivery-preview aria-live="polite">${esc(deliveryPreview(s))}</p>
+        <p class="delivery-hint">A distância não é medida automaticamente: informe uma estimativa. A pizzaria confirma o trajeto e o frete pelo WhatsApp.</p>
+      </div>
       <label for="{prefix}-payment">Forma de pagamento</label><select id="{prefix}-payment" data-field="payment">${(cfg.business.paymentMethods||['A combinar']).map(x=>`<option value="${esc(x)}" ${x===form.payment?'selected':''}>${esc(x)}</option>`).join('')}</select>
       <label for="{prefix}-notes">Observações gerais (opcional)</label><textarea id="{prefix}-notes" data-field="notes" rows="2" maxlength="300" placeholder="Referência do endereço, instruções de entrega...">${esc(form.notes)}</textarea>
     </form>` : '';
@@ -184,13 +232,16 @@
       toast('Informe o endereço, número e bairro.'); focusMissing('address'); return;
     }
     const s = totals();
+    if(s.invalidKm){toast('Digite uma distância válida em km (ex.: 5,5).');focusMissing('distanceKm');return;}
+    if(s.outOfArea){toast(`Distância acima dos ${maxKm} km atendidos.`);focusMissing('distanceKm');return;}
     const when = new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date());
     const lines = [
       `🍕 *CONSULTA DE PEDIDO — ${cfg.business.name.toUpperCase()}*`,
       `Enviado em: ${when}`,'',
       ...cart.flatMap(i => [`${i.qty}x ${formatName(i)} — ${validPrice(itemPrice(i)) ? money(itemPrice(i)*i.qty) + (i.note?' (preço base; alterações a confirmar)':'') : 'preço a confirmar'}`, ...(i.note?[`   ✎ Observação desta pizza: ${i.note}`]:[])]),
       '', `Subtotal base: ${s.pending?'a confirmar':money(s.subtotal)}`,
-      `Frete: ${formatPrice(s.fee)}`,
+      `Distância estimada: ${s.km===null?'não informada':displayKm(s.km)+' km (informada pelo cliente)'}`,
+      `Frete: ${formatPrice(s.fee)}${validPrice(s.fee)?' (estimado; sujeito à confirmação)':' (a confirmar)'}`,
       `Total: ${s.total===null?'a confirmar':money(s.total)}`,'',
       `*Cliente:* ${form.name.trim()}`,
       `*Endereço:* ${form.address.trim()||'A informar'}`,
@@ -243,7 +294,10 @@
   });
   const updateField = event => {
     const key=event.target.dataset?.field;
-    if (Object.hasOwn(form,key)) form[key]=event.target.value;
+    if (Object.hasOwn(form,key)) {
+      form[key]=event.target.value;
+      if(key==='distanceKm') updateDeliveryLive();
+    }
   };
   document.addEventListener('input',updateField);
   document.addEventListener('change',updateField);
@@ -276,11 +330,11 @@
   $('menu-description').textContent=cfg.business.draft?`Conheça nossos ${products.length} sabores iniciais${halfEnabled?' e monte uma pizza meio a meio':''}. Em breve, mais novidades.`:`Escolha nossos ${products.length} sabores${halfEnabled?' ou monte uma pizza meio a meio':''}. Envie seu pedido pelo WhatsApp.`;
   $('year').textContent=new Date().getFullYear();
   $('open-days').textContent=cfg.business.openDays + (cfg.business.openHours?' · '+cfg.business.openHours:' · Horários a confirmar');
-  $('delivery-details').textContent=`Até ${cfg.delivery?.radiusKm||15} km · ${formatPrice(cfg.delivery?.fee)}`;
+  $('delivery-details').textContent=`Até ${maxKm} km · Frete a partir de ${money(baseFee)}`;
   $('payments').textContent=(cfg.business.paymentMethods||[]).join(' · ')||'A confirmar';
   $('draft-note').hidden=!cfg.business.draft;
   if (cfg.options?.halfHalfEnabled===false || products.length<2) $('meio-a-meio').hidden=true;
   const allPricesReady=products.every(p=>validPrice(p.price));
-  if (allPricesReady&&validPrice(cfg.delivery?.fee)) $('menu-note').textContent='Preços informados · entrega sujeita à confirmação';
+  if (allPricesReady) $('menu-note').textContent='Preços informados · frete calculado pela distância estimada';
   renderProducts(); renderCart();
 })();
