@@ -48,3 +48,40 @@
 .add-button .icon-cart{width:17px;height:17px;stroke-width:2}.add-button:focus-visible,.header-cart:focus-visible,.mobile-cart-button:focus-visible{outline:3px solid #ec702b;outline-offset:3px}
 .mobile-basket{display:inline-flex;align-items:center;gap:7px}.mobile-basket .icon-cart{width:23px;height:23px;stroke-width:2.2}.mobile-basket b{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:100px;background:#fff;color:var(--orange);padding:0 3px;font-weight:900}
 @media(max-width:600px){.mobile-cart-button{gap:7px;padding:0 12px}.mobile-cart-button>span:nth-child(2){white-space:nowrap}.mobile-cart-button>span:last-child{font-size:.69rem}}
+
+/* V7 — WhatsApp, 10 km e fotografia gastronômica */
+.icon-whatsapp{display:inline-block;flex:none;vertical-align:middle;color:currentColor;stroke-linecap:round;stroke-linejoin:round}
+.header-contact{background:linear-gradient(180deg,#2b2723,#221f1c)}
+.header-contact:hover{background:#2f2a26}
+.whatsapp-mini{width:26px;height:26px;font-size:0;background:#1fae66}
+.whatsapp-mini .icon-whatsapp{width:15px;height:15px;color:#fff}
+.info-section .button-hot{gap:12px}.info-section .button-hot .icon-whatsapp{width:19px;height:19px}
+.hero-chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}
+.hero-chips span{padding:8px 12px;border-radius:999px;background:#ffffff12;border:1px solid #ffffff22;color:#efdfce;font-size:.72rem;font-weight:800}
+.hero-facts{margin-top:34px}
+.hero-visual{height:610px}
+.hero-image-wrap{box-shadow:0 32px 48px rgba(0,0,0,.3)}
+.hero-image-wrap img{transform:scale(1.08) rotate(10deg)}
+.hero-floating-photo{position:absolute;left:-7px;bottom:54px;width:208px;height:150px;z-index:2;overflow:hidden;border:6px solid #fff3e8;border-radius:25px;background:#fff;box-shadow:0 19px 35px rgba(0,0,0,.32);transform:rotate(-7deg)}
+.hero-floating-photo img{width:100%;height:100%;object-fit:cover}
+.hero-sticker{z-index:3;box-shadow:0 12px 33px #0007}
+.menu-section{background:linear-gradient(180deg,#fff9f4 0%,#fffdfa 100%)}
+.pizza-card{border-color:#ebdac9;box-shadow:0 16px 34px rgba(63,34,11,.06)}
+.pizza-card:hover{box-shadow:0 20px 38px rgba(47,24,8,.12)}
+.pizza-image:after{content:"";position:absolute;inset:auto 0 0;height:68px;background:linear-gradient(180deg,transparent,#0002);pointer-events:none}
+.real-gallery{padding:78px 0 99px;background:linear-gradient(180deg,#fffdfa,#fff2e6)}
+.real-gallery-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:32px;align-items:center}
+.real-gallery-copy h2{font-size:clamp(2.3rem,4.5vw,3.8rem);line-height:1.1;letter-spacing:-.055em;margin:14px 0 19px}
+.real-gallery-copy h2 em{font-family:Georgia,serif;font-weight:400}
+.real-gallery-copy>p{color:var(--muted);max-width:450px;line-height:1.65}
+.real-gallery-copy .button{margin-top:22px}
+.real-gallery-copy .photo-caption{font-size:.71rem;margin-top:18px}
+.real-gallery-cards{display:grid;grid-template-columns:1.1fr .9fr;gap:17px;align-items:end}
+.real-shot{margin:0;border-radius:22px;overflow:hidden;background:#fff;box-shadow:0 20px 34px #35211418}
+.real-shot img{display:block;width:100%;height:295px;object-fit:cover}
+.real-shot.small{transform:translateY(22px)}
+.real-shot figcaption{padding:15px 17px;background:#fff;font-weight:850;font-size:.81rem;line-height:1.45}
+@media(max-width:1100px){.hero-floating-photo{left:-4px;bottom:30px;width:167px;height:125px}.real-gallery-grid{grid-template-columns:1fr}.real-gallery-cards{max-width:700px}}
+@media(max-width:850px){.hero-visual{height:485px}.hero-floating-photo{left:0;bottom:20px;width:135px;height:104px}}
+@media(max-width:600px){.hero-visual{height:310px}.hero-image-wrap{height:275px;top:10px}.hero-floating-photo{left:4px;bottom:9px;width:110px;height:89px;border-width:4px;border-radius:15px}.hero-chips{gap:6px}.hero-chips span{font-size:.65rem;padding:7px 10px}.real-gallery{padding:62px 0 72px}.real-gallery-cards{grid-template-columns:1fr 1fr;gap:10px}.real-shot img{height:155px}.real-shot figcaption{padding:11px;font-size:.7rem}.real-shot.small{transform:translateY(0)}}
+@media(max-width:370px){.real-shot img{height:125px}}

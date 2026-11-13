@@ -19,9 +19,9 @@ window.DOPPIO_CONFIG = {
     draft: true
   },
   delivery: {
-    radiusKm: 15,
+    radiusKm: 10,
     fee: null, // valor fixo, quando definido. Cobrança por bairro pode ser avaliada na próxima versão.
-    feeMessage: 'Frete confirmado pela equipe após verificar o endereço.',
+    feeMessage: 'Entregas em até 10 km. Frete confirmado após verificar o endereço.',
     freeFrom: null // futuro: frete grátis a partir de um valor, quando houver política definida
   },
   options: {
