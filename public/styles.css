@@ -103,3 +103,11 @@
  .pizza-body .pizza-ingredients-line{font-size:.75rem;line-height:1.5;padding-left:8px;margin:7px 0 10px}
  .pizza-body .pizza-ingredients-line + .pizza-bottom{margin-top:11px}
 }
+
+
+/* V10 — Proximidade fotográfica: Frango e Calabresa no mesmo plano das outras pizzas */
+/* Preserva exatamente as fotos aprovadas; a aproximação é só visual nos cards. */
+.pizza-card .pizza-image > img[src$="frango-real.avif"] { transform: scale(1.80); transform-origin: center center; object-position: center; }
+.pizza-card .pizza-image > img[src$="calabresa-real.avif"] { transform: scale(1.72); transform-origin: center center; object-position: center; }
+.pizza-card:hover .pizza-image > img[src$="frango-real.avif"] { transform: scale(1.86); }
+.pizza-card:hover .pizza-image > img[src$="calabresa-real.avif"] { transform: scale(1.78); }
