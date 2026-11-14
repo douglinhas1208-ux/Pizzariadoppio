@@ -12,6 +12,17 @@
   const products = cfg.products.filter(p => p && typeof p.id === 'string' && p.available !== false);
   const byId = id => products.find(p => p.id === id);
   const formatPrice = n => validPrice(n) ? money(n) : 'A confirmar';
+  // Preço de destaque: reais maiores e centavos em posição elevada, sem descontos fictícios.
+  const priceMarkup = value => {
+    if(!validPrice(value))return '<span class="price price-pending">Preço a confirmar</span>';
+    const [reais, centavos]=value.toFixed(2).split('.');
+    return '<span class="price price-featured" aria-label="'+esc(money(value))+'">'
+      +'<span class="price-eyebrow">PREÇO DA PIZZA</span>'
+      +'<span class="price-amount"><small class="price-currency">R$</small>'
+      +'<strong class="price-integer">'+Number(reais).toLocaleString('pt-BR')+'</strong>'
+      +'<sup class="price-decimal">,'+centavos+'</sup></span></span>';
+  };
+
   const cleanNote = v => String(v ?? '').replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').trim().slice(0,180);
   const makeKey = i => {
     const base = i.type === 'half' ? `half:${i.a}:${i.b}` : `pizza:${i.id}`;
@@ -94,7 +105,7 @@
       <div class="pizza-image"><img src="${esc(p.image)}" alt="Pizza de ${esc(p.name)}" loading="lazy" decoding="async" width="560" height="390"><span class="pizza-tag">${esc(p.tag||p.category||'Sabor')}</span></div>
       <div class="pizza-body"><span class="pizza-category">${esc(p.category||'Outros')}</span><h3>${esc(p.name)}</h3>
       <p class="pizza-ingredients-line" aria-label="Ingredientes: ${esc(Array.isArray(p.ingredients)?p.ingredients.join(', '):p.description)}">${Array.isArray(p.ingredients)&&p.ingredients.length?p.ingredients.map(esc).join(' · '):esc(p.description)}</p>
-      <div class="pizza-bottom"><span class="price ${validPrice(p.price)?'':'price-pending'}">${validPrice(p.price)?money(p.price):'Preço a confirmar'}</span><button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="Adicionar ${esc(p.name)} ao carrinho">${cartIcon} Adicionar</button></div><button type="button" class="customize-link" data-customize="${esc(p.id)}">✎ Personalizar / trocar ingrediente</button></div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
+      <div class="pizza-bottom">${priceMarkup(p.price)}<button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="Adicionar ${esc(p.name)} ao carrinho">${cartIcon} Adicionar</button></div><button type="button" class="customize-link" data-customize="${esc(p.id)}">✎ Personalizar / trocar ingrediente</button></div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
     document.querySelector('.menu-count span').textContent = String(products.length + (halfEnabled ? 1 : 0)).padStart(2,'0');
     renderFilters();
   }

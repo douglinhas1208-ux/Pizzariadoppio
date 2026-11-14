@@ -155,3 +155,62 @@ body.doppio-map-open{overflow:hidden}
 .doppio-map-buttons .doppio-map-primary{background:#ea612b;border-color:#ea612b;color:white}
 .doppio-map-buttons .doppio-map-primary:disabled{opacity:.5}
 @media(max-width:420px){.delivery-field-grid{grid-template-columns:1fr 1.1fr}.doppio-map-window{padding:10px}#doppio-map-overlay{padding:8px}}
+
+
+/* V14 — Preços 54,99 / 49,99 em formato mais chamativo, sem alegações de promoção */
+.pizza-card .price-featured{
+  display:inline-flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:2px;
+  min-width:128px;
+  padding:8px 13px 9px;
+  border-radius:12px;
+  background:linear-gradient(138deg,#fff0e2 0%,#ffead4 100%);
+  border:1px solid #f6d1ac;
+  box-shadow:0 3px 11px rgba(176,87,32,.08);
+  color:#32221a;
+  line-height:1;
+  letter-spacing:normal;
+}
+.pizza-card .price-featured .price-eyebrow{
+  color:#a64b1a;
+  font-size:.57rem;
+  font-weight:900;
+  letter-spacing:.09em;
+  white-space:nowrap;
+}
+.pizza-card .price-featured .price-amount{
+  display:flex;
+  align-items:baseline;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+  gap:2px;
+}
+.pizza-card .price-featured .price-currency{
+  font-size:.87rem;
+  font-weight:900;
+  color:#a64b1a;
+  margin-right:3px;
+}
+.pizza-card .price-featured .price-integer{
+  font-size:2.03rem;
+  line-height:1;
+  font-weight:950;
+  letter-spacing:-.065em;
+  color:#29211d;
+}
+.pizza-card .price-featured .price-decimal{
+  align-self:flex-start;
+  padding-top:1px;
+  font-size:.91rem;
+  line-height:1;
+  font-weight:950;
+  color:#e65f26;
+}
+@media(max-width:600px){
+  .pizza-card .price-featured{min-width:123px;padding:7px 10px 8px}
+  .pizza-card .price-featured .price-integer{font-size:1.88rem}
+  .pizza-card .price-featured .price-eyebrow{font-size:.55rem}
+}
