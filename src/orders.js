@@ -193,7 +193,7 @@ export async function adminOrdersApi(req,env,url){
   try{await ensureOrdersDb(env);}catch(_){return bad('database_error','Banco de pedidos indisponível.',503);}
   if(url.pathname==='/api/admin/orders'&&req.method==='GET'){
     try{
-      await expireOrders(env);
+      // Retenção é aplicada pelo cron diário; evitar DELETE repetido a cada atualização de 10 segundos.
       const [rows,groups]=await Promise.all([
         env.DOPPIO_DB.prepare('SELECT id,reference,status,created_at,updated_at,customer_name,customer_phone,cep,address,address_number,complement,payment,notes,items_json,subtotal_cents,shipping_cents,total_cents,distance_km,has_customization,paid_amount_cents FROM doppio_orders ORDER BY created_at DESC LIMIT 100').all(),
         env.DOPPIO_DB.prepare('SELECT status,COUNT(*) AS total FROM doppio_orders GROUP BY status').all()

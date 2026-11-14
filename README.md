@@ -91,7 +91,7 @@ Esta é **atualização periódica (quase em tempo real)**, não uma conexão pu
 
 ## Fase 4 — alertas, WhatsApp, financeiro e fotos
 
-**Alertas**: a Central de Pedidos consulta novas solicitações em intervalos de aproximadamente 10 segundos enquanto o painel estiver ativo/visível. Uma solicitação nova provoca um destaque no painel e uma notificação. O áudio é **opcional** e exige clique em "Ativar som" no navegador; configura-se localmente via localStorage, sem emitir áudio antes da autorização. A tab fechada não recebe notificações push.
+**Alertas**: a Central de Pedidos consulta novas solicitações em intervalos de aproximadamente 10 segundos enquanto o painel estiver ativo/visível. Uma solicitação nova provoca um destaque no painel e uma notificação. O áudio é **opcional** e exige clique em "Ativar som" a cada nova sessão do navegador, por restrições de reprodução automática; não emite áudio antes da autorização. A tab fechada não recebe notificações push.
 
 **Atendimento no WhatsApp**: o checkout passou a pedir celular com DDD, que fica restrito ao administrador no banco D1. Os pedidos novos disponibilizam botão "Preparar mensagem no WhatsApp" conforme o status. O botão abre o WhatsApp com o telefone do cliente e mensagem editável, sem enviar automaticamente. Pedidos antigos sem telefone continuam acessíveis, mas não terão botão funcional de contato.
 

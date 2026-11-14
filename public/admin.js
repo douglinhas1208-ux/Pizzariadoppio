@@ -15,7 +15,7 @@
   let ordersGeneration=0;
   const ORDER_REFRESH_MS=10000;
   let soundEnabled=false,alertAudio=null,alertClearTimer;
-  try{soundEnabled=localStorage.getItem('doppio-admin-sound')==='true';}catch(_){}
+  // Reinicia desativado a cada abertura: o navegador exige gesto do usuário para reproduzir som.
   const AudioAPI=window.AudioContext||window.webkitAudioContext;
   function updateSoundButton(){
     $('orders-sound-toggle').textContent=soundEnabled?'🔊 Som ativado':'🔕 Ativar som';
@@ -495,7 +495,6 @@
         toast('Alerta sonoro ativado neste navegador.');
       }catch(_){soundEnabled=false;toast('Toque novamente para autorizar o áudio no navegador.',true);}
     }else{soundEnabled=false;toast('Alerta sonoro desativado.');}
-    try{localStorage.setItem('doppio-admin-sound',String(soundEnabled));}catch(_){}
     updateSoundButton();
   });
   $('orders-alert-dismiss').addEventListener('click',()=>{
