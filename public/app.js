@@ -428,6 +428,6 @@
   $('draft-note').hidden=!cfg.business.draft;
   if (cfg.options?.halfHalfEnabled===false || products.length<2) $('meio-a-meio').hidden=true;
   const allPricesReady=products.every(p=>validPrice(p.price));
-  if (allPricesReady) $('menu-note').textContent='Preços informados · frete calculado pela distância estimada';
+  $('menu-note').textContent=allPricesReady?'Preços informados · frete calculado pela rota':'Preços das pizzas a confirmar · frete automático pelo endereço';
   renderProducts(); renderCart();
 })();
