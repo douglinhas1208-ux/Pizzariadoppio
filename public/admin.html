@@ -80,9 +80,15 @@
             <p>Acompanhe solicitações criadas no checkout, organize o preparo e as entregas.</p>
           </div>
           <div class="orders-refresh-controls">
+            <button type="button" id="orders-sound-toggle" class="admin-button admin-button-muted orders-sound-toggle" aria-pressed="false">🔕 Ativar som</button>
             <span id="orders-live-state" class="orders-live-state" role="status" aria-live="polite">Atualização automática a cada 10s</span>
             <button type="button" class="admin-button admin-button-muted" id="orders-reload">↻ Atualizar</button>
           </div>
+        </div>
+        <div class="orders-new-alert" id="orders-new-alert" role="alert" hidden>
+          <strong id="orders-new-alert-text">🍕 Nova solicitação!</strong>
+          <div><button type="button" id="orders-alert-open">Ver novos pedidos</button>
+          <button type="button" id="orders-alert-dismiss" aria-label="Dispensar alerta">✕</button></div>
         </div>
         <p class="orders-disclaimer">Uma solicitação é registrada <strong>antes</strong> de o cliente enviar a mensagem pelo WhatsApp. Ela não significa compra confirmada. Confirme com o cliente antes de iniciar o preparo.</p>
         <div class="orders-stat-grid">
@@ -110,8 +116,37 @@
         <p class="orders-footnote">Mostramos até 100 solicitações recentes. Os dados são restritos ao administrador e excluídos após 90 dias. Pedidos concluídos não representam, por si só, faturamento confirmado.</p>
       </section>
 
+
+      <section class="admin-panel" id="reports-panel">
+        <div class="panel-head">
+          <div><span class="panel-label">02 · RELATÓRIOS</span><h3>Movimento de pedidos</h3>
+          <p>Acompanhe solicitações e pagamentos que você confirmar manualmente.</p></div>
+          <div class="report-controls">
+            <label for="report-days">Período
+              <select id="report-days">
+                <option value="7">Últimos 7 dias</option>
+                <option value="30">Últimos 30 dias</option>
+                <option value="90">Últimos 90 dias</option>
+              </select>
+            </label>
+            <button type="button" id="reports-reload" class="admin-button admin-button-muted">↻ Atualizar</button>
+          </div>
+        </div>
+        <div class="reports-summary">
+          <div class="reports-summary-item"><small>Solicitações recebidas</small><strong id="report-orders">0</strong></div>
+          <div class="reports-summary-item"><small>Pedidos concluídos</small><strong id="report-completed">0</strong></div>
+          <div class="reports-summary-item"><small>Recebimento informado</small><strong id="report-received">R$ 0,00</strong></div>
+          <div class="reports-summary-item"><small>Total estimado dos concluídos</small><strong id="report-estimated">R$ 0,00</strong></div>
+        </div>
+        <div class="report-chart-wrap">
+          <div class="report-chart-heading"><strong>Recebimentos registrados por dia</strong><small id="report-chart-label"></small></div>
+          <div class="report-chart" id="report-chart"><p class="orders-empty">Carregando relatório...</p></div>
+        </div>
+        <p class="orders-footnote">Valores de recebimento são informados manualmente no pedido e não são verificados por banco ou operadora de cartão. Pedidos concluídos não comprovam pagamento. Cancelamentos e reembolsos devem ser conferidos na sua gestão financeira.</p>
+      </section>
+
       <section class="admin-panel">
-        <div class="panel-head"><div><span class="panel-label">02 · ATENDIMENTO</span><h3>Funcionamento da pizzaria</h3><p>Controle se o checkout aceita novos pedidos.</p></div><span id="order-badge" class="order-badge">Aceitando pedidos</span></div>
+        <div class="panel-head"><div><span class="panel-label">03 · ATENDIMENTO</span><h3>Funcionamento da pizzaria</h3><p>Controle se o checkout aceita novos pedidos.</p></div><span id="order-badge" class="order-badge">Aceitando pedidos</span></div>
         <label class="toggle-row" for="accepting-orders">
           <div><strong>Aceitar pedidos pelo cardápio</strong><small>Ao desligar, os sabores continuam visíveis, mas o checkout é pausado.</small></div>
           <input type="checkbox" role="switch" id="accepting-orders" checked>
@@ -141,9 +176,9 @@
       </section>
 
       <section class="admin-panel">
-        <div class="panel-head"><div><span class="panel-label">03 · CARDÁPIO</span><h3>Sabores e preços</h3><p>Edite preços, descrição, ingredientes, imagens disponíveis e estoque.</p></div><button type="button" class="admin-button admin-button-primary add-flavor" id="add-product">+ Novo sabor</button></div>
+        <div class="panel-head"><div><span class="panel-label">04 · CARDÁPIO</span><h3>Sabores e preços</h3><p>Edite preços, descrição, ingredientes, imagens disponíveis e estoque.</p></div><button type="button" class="admin-button admin-button-primary add-flavor" id="add-product">+ Novo sabor</button></div>
         <div class="product-manager" id="admin-products" aria-live="polite"></div>
-        <p class="product-hint">Nesta primeira versão, as fotos são selecionadas dentre as imagens já publicadas. O envio de novas fotos será implementado separadamente.</p>
+        <p class="product-hint">Envie uma foto JPG, PNG ou WEBP de até 8 MB. O painel compacta a imagem e a armazena no banco D1; depois clique em Salvar alterações para publicá-la no cardápio.</p>
       </section>
 
       <div class="save-panel">

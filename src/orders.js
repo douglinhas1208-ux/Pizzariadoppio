@@ -40,7 +40,20 @@ async function ensureOrdersDb(env){
       +'ip_key TEXT NOT NULL);'
       +'CREATE INDEX IF NOT EXISTS doppio_orders_created_idx ON doppio_orders(created_at DESC);'
       +'CREATE INDEX IF NOT EXISTS doppio_orders_ip_idx ON doppio_orders(ip_key,created_at);'
-    ).catch(e=>{readyPromise=null;throw e;});
+    ).then(async()=>{
+      // Migração das solicitações existentes, sem apagar registros anteriores.
+      const meta=await env.DOPPIO_DB.prepare('PRAGMA table_info(doppio_orders)').all();
+      const columns=new Set((meta.results||[]).map(row=>row.name));
+      for(const [column,definition] of [
+        ['customer_phone',"TEXT NOT NULL DEFAULT ''"],
+        ['paid_amount_cents','INTEGER']
+      ]){
+        if(!columns.has(column)){
+          try{await env.DOPPIO_DB.prepare('ALTER TABLE doppio_orders ADD COLUMN '+column+' '+definition).run();}
+          catch(e){if(!/duplicate column name/i.test(String(e.message||'')))throw e;}
+        }
+      }
+    }).catch(e=>{readyPromise=null;throw e;});
   }
   await readyPromise;
 }
@@ -69,6 +82,8 @@ function validateOrder(input,shop){
   if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Revise os dados do pedido.');
   if(!/^[a-f0-9-]{36}$/i.test(input.clientKey||''))throw Error('Atualize o carrinho e tente novamente.');
   if(!goodText(input.name,70,2))throw Error('Informe seu nome.');
+  const phone=String(input.phone||'').replace(/\D/g,'');
+  if(!/^[1-9][0-9]{9,10}$/.test(phone))throw Error('Informe um telefone com DDD válido.');
   if(!/^\d{8}$/.test(input.cep||''))throw Error('Informe um CEP válido.');
   if(!goodText(input.address,230,7))throw Error('Confira o endereço de entrega.');
   if(!/^[0-9]{1,6}[a-zA-Z]?$/.test(input.number||''))throw Error('Informe o número do endereço.');
@@ -110,7 +125,7 @@ function validateOrder(input,shop){
     }
   }
   return {
-    clientKey:input.clientKey.toLowerCase(),customerName:trim(input.name,70),cep:input.cep,
+    clientKey:input.clientKey.toLowerCase(),customerName:trim(input.name,70),customerPhone:phone,cep:input.cep,
     address:trim(input.address,230),number:trim(input.number,7),complement:trim(input.complement,65),
     payment:trim(input.payment,80),notes:trim(input.notes,300),
     items,subtotalCents:sum,shippingCents,
@@ -148,9 +163,9 @@ export async function createOrder(req,env,url,shop,store){
     const id=crypto.randomUUID();
     const reference='DP-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+id.slice(0,8).toUpperCase();
     await env.DOPPIO_DB.prepare('INSERT INTO doppio_orders '
-      +'(id,reference,client_key,created_at,updated_at,status,customer_name,cep,address,address_number,complement,payment,notes,items_json,subtotal_cents,shipping_cents,total_cents,distance_km,has_customization,ip_key) '
-      +'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-      .bind(id,reference,order.clientKey,now,now,'novo',order.customerName,order.cep,order.address,order.number,
+      +'(id,reference,client_key,created_at,updated_at,status,customer_name,customer_phone,cep,address,address_number,complement,payment,notes,items_json,subtotal_cents,shipping_cents,total_cents,distance_km,has_customization,ip_key) '
+      +'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      .bind(id,reference,order.clientKey,now,now,'novo',order.customerName,order.customerPhone,order.cep,order.address,order.number,
         order.complement,order.payment,order.notes,JSON.stringify(order.items),order.subtotalCents,
         order.shippingCents,order.totalCents,order.distanceKm,order.hasCustomization?1:0,ipKey).run();
     return json(publicReceipt({reference}));
@@ -166,11 +181,11 @@ export async function createOrder(req,env,url,shop,store){
 function safeOrder(row){
   return {
     id:row.id,reference:row.reference,status:row.status,createdAt:Number(row.created_at),
-    updatedAt:Number(row.updated_at),customerName:row.customer_name,cep:row.cep,
+    updatedAt:Number(row.updated_at),customerName:row.customer_name,customerPhone:row.customer_phone||'',cep:row.cep,
     address:row.address,number:row.address_number,complement:row.complement,
     payment:row.payment,notes:row.notes,items:JSON.parse(row.items_json),
     subtotalCents:row.subtotal_cents,shippingCents:row.shipping_cents,totalCents:row.total_cents,
-    distanceKm:row.distance_km,hasCustomization:!!row.has_customization
+    distanceKm:row.distance_km,hasCustomization:!!row.has_customization,paidAmountCents:Number.isInteger(row.paid_amount_cents)?row.paid_amount_cents:null
   };
 }
 export async function adminOrdersApi(req,env,url){
@@ -180,7 +195,7 @@ export async function adminOrdersApi(req,env,url){
     try{
       await expireOrders(env);
       const [rows,groups]=await Promise.all([
-        env.DOPPIO_DB.prepare('SELECT id,reference,status,created_at,updated_at,customer_name,cep,address,address_number,complement,payment,notes,items_json,subtotal_cents,shipping_cents,total_cents,distance_km,has_customization FROM doppio_orders ORDER BY created_at DESC LIMIT 100').all(),
+        env.DOPPIO_DB.prepare('SELECT id,reference,status,created_at,updated_at,customer_name,customer_phone,cep,address,address_number,complement,payment,notes,items_json,subtotal_cents,shipping_cents,total_cents,distance_km,has_customization,paid_amount_cents FROM doppio_orders ORDER BY created_at DESC LIMIT 100').all(),
         env.DOPPIO_DB.prepare('SELECT status,COUNT(*) AS total FROM doppio_orders GROUP BY status').all()
       ]);
       const stats=Object.fromEntries(STATUSES.map(status=>[status,0]));
@@ -201,12 +216,60 @@ export async function adminOrdersApi(req,env,url){
   if(req.method!=='PUT')return bad('method','Use PUT.',405);
   let input;
   try{input=await parseBody(req,1200);}catch(_){return bad('invalid_request','Dados inválidos.',400);}
-  if(!STATUSES.includes(input?.status))return bad('invalid_status','Escolha um status válido.',422);
+  const changesStatus=Object.hasOwn(input||{},'status');
+  const changesPayment=Object.hasOwn(input||{},'paidAmountCents');
+  if(!changesStatus&&!changesPayment)return bad('invalid_request','Nenhuma alteração informada.',422);
+  if(changesStatus&&!STATUSES.includes(input.status))return bad('invalid_status','Escolha um status válido.',422);
+  if(changesPayment&&input.paidAmountCents!==null&&(!Number.isInteger(input.paidAmountCents)||input.paidAmountCents<0||input.paidAmountCents>5000000))
+    return bad('invalid_payment','Valor recebido inválido.',422);
   try{
     const now=Math.floor(Date.now()/1000);
-    const result=await env.DOPPIO_DB.prepare('UPDATE doppio_orders SET status=?,updated_at=? WHERE id=?')
-      .bind(input.status,now,match[1]).run();
+    let sql,values;
+    if(changesStatus&&changesPayment){
+      sql='UPDATE doppio_orders SET status=?,paid_amount_cents=?,updated_at=? WHERE id=?';
+      values=[input.status,input.paidAmountCents,now,match[1]];
+    }else if(changesStatus){
+      sql='UPDATE doppio_orders SET status=?,updated_at=? WHERE id=?';
+      values=[input.status,now,match[1]];
+    }else{
+      sql='UPDATE doppio_orders SET paid_amount_cents=?,updated_at=? WHERE id=?';
+      values=[input.paidAmountCents,now,match[1]];
+    }
+    const result=await env.DOPPIO_DB.prepare(sql).bind(...values).run();
     if(!result.meta||!result.meta.changes)return bad('not_found','Pedido não encontrado.',404);
-    return json({ok:true,status:input.status,label:STATUS_LABELS[input.status]});
+    return json({ok:true,...(changesStatus?{status:input.status,label:STATUS_LABELS[input.status]}:{}),
+      ...(changesPayment?{paidAmountCents:input.paidAmountCents}:{})});
   }catch(_){return bad('database_error','Não foi possível atualizar o pedido.',503);}
+}
+
+export async function adminReportsApi(request,env,url){
+  if(request.method!=='GET')return bad('method','Use GET.',405);
+  const days=Number(url.searchParams.get('days')||7);
+  if(![7,30,90].includes(days))return bad('period','Selecione 7, 30 ou 90 dias.',422);
+  try{
+    await ensureOrdersDb(env);
+    const now=Math.floor(Date.now()/1000);
+    const since=now-days*86400;
+    const rows=await env.DOPPIO_DB.prepare(
+      "SELECT date(datetime(created_at,'unixepoch','-3 hours')) AS dia, "
+      +"COUNT(*) AS pedidos, SUM(CASE WHEN status='concluido' THEN 1 ELSE 0 END) AS concluidos, "
+      +"SUM(CASE WHEN status='cancelado' THEN 1 ELSE 0 END) AS cancelados, "
+      +"SUM(CASE WHEN status='concluido' THEN COALESCE(total_cents,0) ELSE 0 END) AS estimado_cents, "
+      +"SUM(CASE WHEN paid_amount_cents IS NOT NULL THEN paid_amount_cents ELSE 0 END) AS recebido_cents, "
+      +"SUM(CASE WHEN paid_amount_cents IS NOT NULL THEN 1 ELSE 0 END) AS pagamentos "
+      +"FROM doppio_orders WHERE created_at>=? GROUP BY dia ORDER BY dia ASC"
+    ).bind(since).all();
+    const daily=(rows.results||[]).map(r=>({
+      day:r.dia,orders:Number(r.pedidos),completed:Number(r.concluidos),
+      canceled:Number(r.cancelados),estimatedCents:Number(r.estimado_cents||0),
+      receivedCents:Number(r.recebido_cents||0),payments:Number(r.pagamentos||0)
+    }));
+    const totals=daily.reduce((o,r)=>({
+      orders:o.orders+r.orders,completed:o.completed+r.completed,canceled:o.canceled+r.canceled,
+      estimatedCents:o.estimatedCents+r.estimatedCents,receivedCents:o.receivedCents+r.receivedCents,
+      payments:o.payments+r.payments
+    }),{orders:0,completed:0,canceled:0,estimatedCents:0,receivedCents:0,payments:0});
+    return json({ok:true,days,daily,totals,
+      note:'Valores recebidos sao confirmados manualmente no painel, sem verificacao bancaria ou comprovacao automatica.'});
+  }catch(_){return bad('database_error','Não foi possível gerar o relatório.',503);}
 }

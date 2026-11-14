@@ -62,7 +62,7 @@
     const stored = JSON.parse(localStorage.getItem('doppio-cart-v2') || localStorage.getItem('doppio-cart-v1') || '[]');
     if (Array.isArray(stored)) cart = stored.map(normalizeItem).filter(Boolean).slice(0,40);
   } catch (_) { /* O carrinho funciona mesmo se o armazenamento estiver indisponível. */ }
-  const form={name:'',cep:'',numero:'',complemento:'',address:'',payment:(cfg.business.paymentMethods||[])[0]||'A combinar',notes:''};
+  const form={name:'',phone:'',cep:'',numero:'',complemento:'',address:'',payment:(cfg.business.paymentMethods||[])[0]||'A combinar',notes:''};
   const maxKm=Number(cfg.delivery?.radiusKm)||10;
   const baseKm=Number(cfg.delivery?.includedKm)||5;
   const baseFee=Number(cfg.delivery?.minFee)||5;
@@ -71,6 +71,7 @@
   const shipping={status:'idle',address:null,quote:null,message:'',requestId:0};
   let lookupTimer=null, quoteTimer=null;
   const validNumber=()=>/^[0-9]{1,6}[a-zA-Z]?$/.test(form.numero.trim());
+  const phoneDigits=()=>form.phone.replace(/\D/g,'');
   const cepDigits=()=>form.cep.replace(/\D/g,'');
   const invalidateQuote=()=>{
     shipping.quote=null;shipping.message='';
@@ -215,6 +216,9 @@
     const fields=cart.length?`<form class="order-form" onsubmit="return false">
       <label for="{prefix}-name">Seu nome <span class="required-mark">*</span></label>
       <input id="{prefix}-name" data-field="name" autocomplete="name" maxlength="70" placeholder="Como podemos chamar você?" value="${esc(form.name)}" required>
+      <label for="{prefix}-phone">Celular com DDD para contato <span class="required-mark">*</span></label>
+      <input id="{prefix}-phone" data-field="phone" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="18" placeholder="(11) 99999-9999" value="${esc(form.phone)}" required>
+      <p class="delivery-hint">Usaremos seu número apenas para confirmar e acompanhar o pedido pelo WhatsApp.</p>
       <div class="delivery-calculator">
         <strong class="delivery-title">Frete automático pelo CEP</strong>
         <label for="{prefix}-cep">CEP de entrega <span class="required-mark">*</span></label>
@@ -344,6 +348,7 @@
       <section class="review-section" aria-label="Informações de entrega">
         <div class="review-section-heading"><h3>📍 Entrega</h3><span>Confira o endereço</span></div>
         <div class="review-data-pair"><small>Nome</small><strong>${esc(form.name.trim())}</strong></div>
+        <div class="review-data-pair"><small>Celular</small><strong>${esc(form.phone.trim())}</strong></div>
         <div class="review-data-pair"><small>Endereço</small><strong>${esc(address)}</strong></div>
         <div class="review-data-pair"><small>Pagamento</small><strong>${esc(form.payment)}</strong></div>
         ${form.notes.trim()?`<div class="review-data-pair"><small>Observações</small><strong>${esc(form.notes.trim())}</strong></div>`:''}
@@ -374,6 +379,7 @@
     if(!acceptingOrders)return toast('A pizzaria está fechada ou com pedidos pausados.');
     if(!cart.length)return toast('Adicione uma pizza primeiro.');
     if(form.name.trim().length<2){toast('Informe seu nome.');focusMissing('name');return;}
+    if(!/^[1-9][0-9]{9,10}$/.test(phoneDigits())){toast('Informe celular com DDD válido.');focusMissing('phone');return;}
     if(cepDigits().length!==8){toast('Informe um CEP válido.');focusMissing('cep');return;}
     if(!validNumber()){toast('Informe o número da residência.');focusMissing('numero');return;}
     if(!shipping.address||!form.address.trim()){toast('Aguarde a consulta do CEP.');focusMissing('cep');return;}
@@ -394,7 +400,7 @@
     try{
       if(!checkoutKey)checkoutKey=crypto.randomUUID();
       const snapshot={
-        clientKey:checkoutKey,name:form.name.trim(),cep:cepDigits(),address:form.address.trim(),
+        clientKey:checkoutKey,name:form.name.trim(),phone:phoneDigits(),cep:cepDigits(),address:form.address.trim(),
         number:form.numero.trim(),complement:form.complemento.trim(),payment:form.payment,
         notes:form.notes.trim(),items:cart.map(i=>i.type==='half'
           ? {type:'half',a:i.a,b:i.b,qty:i.qty,note:i.note||''}
@@ -444,6 +450,7 @@
       'Frete estimado pelo CEP: '+(validPrice(stats.fee)?money(stats.fee):'a confirmar pela pizzaria'),
       'Total '+(stats.customized?'base estimado':'estimado')+': '+(baseTotal===null?'a confirmar':money(baseTotal)),'',
       '*Cliente:* '+form.name.trim(),
+      '*Celular:* '+form.phone.trim(),
       '*Endereço:* '+form.address+', nº '+form.numero.trim()+(form.complemento.trim()?', '+form.complemento.trim():'')+' · CEP '+form.cep.trim(),
       '*Pagamento:* '+form.payment,
       '*Observações gerais:* '+(form.notes.trim()||'Nenhuma'), '',

@@ -105,3 +105,54 @@
 .orders-live-state.offline{color:#a45e27}
 .orders-live-state.offline::before{background:#d99838}
 @media(max-width:700px){.orders-refresh-controls{width:100%;justify-items:start}.orders-panel .panel-head{flex-wrap:wrap}}
+
+/* Alertas visuais e sonoros (som acionado apenas pelo operador) */
+.orders-sound-toggle{font-size:.76rem!important;padding:8px 12px!important}
+.orders-sound-toggle[aria-pressed="true"]{color:#246f40!important;border-color:#89c59b!important;background:#edf8ef!important}
+.orders-new-alert[hidden]{display:none!important}
+.orders-new-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;border:2px solid #ee842f;background:#fff1db;padding:13px 17px;margin:0 0 16px;border-radius:12px;color:#64330c;box-shadow:0 6px 18px #d0642d24}
+.orders-new-alert strong{font-size:.9rem;line-height:1.4}
+.orders-new-alert div{display:flex;gap:8px;align-items:center}
+.orders-new-alert button{cursor:pointer;border:1px solid #c86b23;background:#d86a1f;color:white;padding:8px 11px;border-radius:8px;font-size:.76rem;font-weight:850}
+.orders-new-alert button:last-child{background:transparent;color:#7b4a20;border-color:#e7bd8f}
+.orders-panel.has-new-orders{border-color:#e89c4a;box-shadow:0 0 0 2px #f6d6af}
+@media (prefers-reduced-motion:no-preference){.orders-panel.has-new-orders{animation:orders-glow 1.3s ease-in-out 3}
+@keyframes orders-glow{0%,100%{box-shadow:0 0 0 2px #f6d6af}50%{box-shadow:0 0 0 6px #f9e4d0}}}
+@media(max-width:700px){.orders-new-alert{flex-wrap:wrap}.orders-new-alert div{width:100%;justify-content:space-between}}
+
+/* Botões de WhatsApp e recebimento no detalhe dos pedidos */
+.order-actions-whatsapp{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.order-contact-button,.order-payment-button{font:inherit;font-size:.75rem;font-weight:800;padding:10px 12px;border:1px solid #95cf9d;border-radius:9px;background:#ecfaef;color:#176635;text-decoration:none;cursor:pointer}
+.order-contact-button:hover,.order-payment-button:hover{background:#d9f3e0}
+.order-contact-button:disabled{cursor:not-allowed;opacity:.55}
+.order-payment-button{border-color:#f0c3a1;background:#fff3e8;color:#92501b}
+.order-payment-button.paid{border-color:#98ce9f;background:#eaf8ec;color:#266a3a}
+.order-payment-notice{font-size:.72rem;line-height:1.4;color:#6f6256}
+.order-contact-notice{font-size:.71rem;color:#9a6e56}
+
+/* Relatório financeiro de lançamentos manuais */
+.report-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
+.report-controls label{display:grid;gap:6px;font-size:.75rem;font-weight:800;color:#655349}
+.report-controls select{padding:9px 11px;border:1px solid #dbcfc3;border-radius:9px;background:#fff;font:inherit;font-size:.8rem}
+.reports-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:18px 0 22px}
+.reports-summary-item{padding:15px;background:#fffaf6;border:1px solid #eaded2;border-radius:12px;display:grid;align-content:space-between;gap:15px;min-height:98px}
+.reports-summary-item small{font-size:.72rem;font-weight:700;color:#77685b;line-height:1.4}
+.reports-summary-item strong{font-size:1.25rem;color:#38271e;line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.report-chart-wrap{padding:16px;border:1px solid #e9dfd5;border-radius:13px}
+.report-chart-heading{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:13px}
+.report-chart-heading strong{font-size:.85rem;color:#3d2a1f}
+.report-chart-heading small{font-size:.71rem;color:#807469}
+.report-chart{display:flex;align-items:end;justify-content:space-around;gap:8px;min-height:135px}
+.report-bar-column{display:grid;align-content:end;justify-items:center;flex:1;min-width:12px;max-width:80px;height:135px;gap:7px}
+.report-bar{display:block;background:#e67a3f;border-radius:6px 6px 3px 3px;width:min(70%,40px);min-height:4px;max-height:106px}
+.report-bar-column small{font-size:.68rem;color:#7c6b5d;white-space:nowrap}
+.report-bar-column strong{font-size:.66rem;color:#533a2b}
+@media(max-width:800px){.reports-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:500px){.report-controls{width:100%}.report-chart-wrap{padding:10px}.report-bar-column strong{font-size:.56rem}.reports-summary-item strong{font-size:1.08rem}}
+
+/* Upload de fotos sem GitHub: envio com compressão automática */
+.photo-upload-box{display:grid;gap:8px;padding:12px 13px;background:#faf4ed;border:1px dashed #d8bda6;border-radius:10px;margin-top:9px}
+.photo-upload-box>strong{font-size:.77rem;color:#5f412e}
+.photo-upload-box input[type=file]{font:inherit;font-size:.73rem;max-width:100%;color:#554a43}
+.photo-upload-box small{font-size:.69rem;line-height:1.5;color:#8d735c}
+.photo-upload-box .photo-upload-progress{color:#2b7950;font-weight:800}

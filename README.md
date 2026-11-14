@@ -88,3 +88,15 @@ O painel administrativo consulta os pedidos **a cada 10 segundos** enquanto a ab
 O painel só reconstrói a lista quando os dados mudam, preservando filtro, pesquisa e o estado aberto dos detalhes da solicitação. Durante a alteração de status e enquanto o seletor de status está em foco, a sincronização automática espera para não interromper o operador. A última sincronização e problemas de conexão são mostrados na seção de pedidos. O botão manual "Atualizar" permanece disponível.
 
 Esta é **atualização periódica (quase em tempo real)**, não uma conexão push nem uma integração automática com mensagens do WhatsApp.
+
+## Fase 4 — alertas, WhatsApp, financeiro e fotos
+
+**Alertas**: a Central de Pedidos consulta novas solicitações em intervalos de aproximadamente 10 segundos enquanto o painel estiver ativo/visível. Uma solicitação nova provoca um destaque no painel e uma notificação. O áudio é **opcional** e exige clique em "Ativar som" no navegador; configura-se localmente via localStorage, sem emitir áudio antes da autorização. A tab fechada não recebe notificações push.
+
+**Atendimento no WhatsApp**: o checkout passou a pedir celular com DDD, que fica restrito ao administrador no banco D1. Os pedidos novos disponibilizam botão "Preparar mensagem no WhatsApp" conforme o status. O botão abre o WhatsApp com o telefone do cliente e mensagem editável, sem enviar automaticamente. Pedidos antigos sem telefone continuam acessíveis, mas não terão botão funcional de contato.
+
+**Relatórios**: em /admin é possível consultar períodos de 7, 30 e 90 dias, com contagem de solicitações, pedidos concluídos, total estimado dos concluídos e **recebimentos informados manualmente**. O administrador pode confirmar um valor realmente recebido para cada pedido (ou desfazer), e o relatório considera essa declaração. Nenhuma integração bancária nem conciliação automática está incluída; valores declarados não são prova financeira e reembolsos precisam ser controlados manualmente.
+
+**Fotos**: o Doppio Admin permite escolher JPG/PNG/WEBP de até 8 MB. O navegador redimensiona e converte para JPEG de no máximo 350 KiB, carregado por uma API administrativa autenticada e guardado no mesmo banco D1. A imagem recebe rota pública /api/photo/<UUID> para o cardápio. Não é necessário criar bucket R2 nem novo secret. Após o envio, é preciso clicar em "Salvar alterações" para associá-la ao sabor na loja pública. As fotos já existentes continuam disponíveis.
+
+**Privacidade e segurança**: pedidos antigos preservados durante migração do D1 (adição dos campos customer_phone e paid_amount_cents). Fotos e relatórios exigem login para edição; fotos usadas no cardápio são publicamente acessíveis. Dados de clientes e recebimentos não são expostos por endpoints públicos. Testes devem empregar exclusivamente dados fictícios e não enviar mensagens a clientes reais.

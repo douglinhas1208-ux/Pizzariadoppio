@@ -1,4 +1,5 @@
-import {adminOrdersApi,createOrder} from './orders.js';
+import {adminOrdersApi,createOrder,adminReportsApi} from './orders.js';
+import {adminPhotoApi} from './images.js';
 /*
  * Doppio Admin — API segura (Cloudflare Workers + D1).
  * Nenhuma senha ou chave é mantida no repositório.
@@ -167,7 +168,7 @@ function validateState(raw,revision){
     if(typeof p.id!=='string'||!/^[a-z0-9][a-z0-9-]{1,39}$/.test(p.id)||ids.has(p.id))throw Error('Identificador de sabor inválido ou duplicado.');
     ids.add(p.id);
     if(!validText(p.name,70,2)||!validText(p.description,240)||!validText(p.category,50,2)||!validText(p.tag,36)||!validText(p.image,180,5))throw Error('Preencha corretamente as informações dos sabores.');
-    if(!/^assets\/[A-Za-z0-9/_-]+\.(?:webp|avif|png|jpe?g)$/i.test(p.image)||p.image.includes('..'))throw Error('A foto deve estar na pasta de imagens da pizzaria.');
+    if(!/^(?:assets\/[A-Za-z0-9/_-]+\.(?:webp|avif|png|jpe?g)|api\/photo\/[a-f0-9-]{36})$/i.test(p.image)||p.image.includes('..'))throw Error('A foto deve ser uma imagem cadastrada da pizzaria.');
     if(!Number.isFinite(p.price)||p.price<1||p.price>500||Math.abs(p.price*100-Math.round(p.price*100))>1e-6)throw Error('O preço deve ser entre R$ 1 e R$ 500, com até 2 casas decimais.');
     if(typeof p.available!=='boolean')throw Error('Disponibilidade inválida.');
     if(!Array.isArray(p.ingredients)||p.ingredients.length>16||!p.ingredients.every(v=>validText(v,50,1)))throw Error('Ingredientes inválidos.');
@@ -222,6 +223,8 @@ export async function adminApi(request,env,url){
   if(!authed)return error('unauthorized','Entre novamente para continuar.',401);
   if(url.pathname==='/api/admin/me'&&request.method==='GET')return j({ok:true,authenticated:true});
   if(url.pathname==='/api/admin/orders'||url.pathname.startsWith('/api/admin/orders/'))return adminOrdersApi(request,env,url);
+  if(url.pathname==='/api/admin/reports')return adminReportsApi(request,env,url);
+  if(url.pathname==='/api/admin/images'||url.pathname.startsWith('/api/admin/images/'))return adminPhotoApi(request,env,url);
   if(url.pathname==='/api/admin/logout'&&request.method==='POST')return j({ok:true},200,{'set-cookie':cookieHeader('',true)});
   if(url.pathname==='/api/admin/state'&&request.method==='GET'){
     try{return j({ok:true,state:await stateRow(env)});}
