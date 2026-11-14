@@ -157,7 +157,6 @@
     }).join('');
   }
   async function loadOrders(){
-    if(orderBusy)return;
     try{
       const data=await api('orders');
       orders=data.orders||[];
