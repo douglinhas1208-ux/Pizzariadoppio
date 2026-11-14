@@ -155,35 +155,45 @@
     +'</article>';
   }
 
-  function compressPizzaPhoto(file){
+  async function compressPizzaPhoto(file){
     if(!file||!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Escolha uma foto JPG, PNG ou WEBP.');
     if(file.size>8*1024*1024)throw Error('Escolha uma foto de até 8 MB.');
-    return new Promise((resolve,reject)=>{
-      const url=URL.createObjectURL(file),img=new Image();
-      img.onload=()=>{
-        URL.revokeObjectURL(url);
-        try{
-          if(!img.naturalWidth||!img.naturalHeight)throw Error('Imagem inválida.');
-          const canvas=document.createElement('canvas');
-          const ctx=canvas.getContext('2d');
-          if(!ctx)throw Error('Não foi possível processar a foto.');
-          let maxSide=1000;
-          for(let pass=0;pass<7;pass++){
-            const factor=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));
-            canvas.width=Math.max(1,Math.round(img.naturalWidth*factor));
-            canvas.height=Math.max(1,Math.round(img.naturalHeight*factor));
-            ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
-            ctx.drawImage(img,0,0,canvas.width,canvas.height);
-            const base64=canvas.toDataURL('image/jpeg',Math.max(.56,.82-pass*.04)).split(',')[1];
-            if(base64.length<=470000){resolve(base64);return;}
-            maxSide=Math.round(maxSide*.79);
-          }
-          throw Error('Foto muito detalhada para compactar. Escolha outra imagem.');
-        }catch(e){reject(e);}
-      };
-      img.onerror=()=>{URL.revokeObjectURL(url);reject(Error('Não foi possível abrir esta foto.'));};
-      img.src=url;
-    });
+    let img;
+    if(typeof createImageBitmap==='function'){
+      try{img=await createImageBitmap(file);}catch(_){throw Error('Não foi possível abrir esta foto.');}
+    }else{
+      // Leitura sem URL temporária para compatibilidade com políticas de segurança.
+      img=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onerror=()=>reject(Error('Não foi possível ler a foto.'));
+        reader.onload=()=>{
+          const image=new Image();
+          image.onload=()=>resolve(image);
+          image.onerror=()=>reject(Error('Não foi possível abrir esta foto.'));
+          image.src=reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    try{
+      const width=img.width||img.naturalWidth,height=img.height||img.naturalHeight;
+      if(!width||!height)throw Error('Imagem inválida.');
+      const canvas=document.createElement('canvas');
+      const ctx=canvas.getContext('2d');
+      if(!ctx)throw Error('Não foi possível processar a foto.');
+      let maxSide=1000;
+      for(let pass=0;pass<7;pass++){
+        const factor=Math.min(1,maxSide/Math.max(width,height));
+        canvas.width=Math.max(1,Math.round(width*factor));
+        canvas.height=Math.max(1,Math.round(height*factor));
+        ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        const base64=canvas.toDataURL('image/jpeg',Math.max(.56,.82-pass*.04)).split(',')[1];
+        if(base64.length<=470000)return base64;
+        maxSide=Math.round(maxSide*.79);
+      }
+      throw Error('Foto muito detalhada para compactar. Escolha outra imagem.');
+    }finally{if(typeof img.close==='function')img.close();}
   }
   async function uploadPizzaPhoto(index,file,input){
     const product=state?.products[index];
