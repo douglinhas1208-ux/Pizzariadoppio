@@ -1,0 +1,3 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Teste privado de integração Doppio</title><meta name="robots" content="noindex,nofollow"></head><body><h1>Diagnóstico temporário do frete</h1><pre id="result">Verificando serviço...</pre><script>
+(async()=>{const out=document.getElementById('result');try{const r=await fetch('/api/frete',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cep:'03583000',numero:'60'})});const j=await r.json();out.textContent=JSON.stringify({http:r.status,result:j},null,2)}catch(e){out.textContent='Erro: '+e.message}})();
+</script></body></html>
