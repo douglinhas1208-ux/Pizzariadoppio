@@ -34,6 +34,8 @@ window.DOPPIO_CONFIG = {
     catupiryCrustAvailable: false, // previsto para o futuro
     requireDeliveryAddress: true // impede enviar pedido sem endereço
   },
+  // Coloque false para ocultar o banner promocional sem alterar o catálogo.
+  promotion: { twoPizzasSodaBannerEnabled: true },
   products: [
     {id:'frango', name:'Frango com Catupiry', description:'Frango e Catupiry.', ingredients:['Massa','Molho de tomate','Frango','Catupiry','Azeitonas'], category:'Clássicas', image:'assets/frango-real.avif', price:54.99, available:true, tag:'Clássica'},
     {id:'brocolis', name:'Brócolis com Bacon', description:'Brócolis, bacon e Catupiry.', ingredients:['Massa','Molho de tomate','Brócolis','Bacon','Catupiry'], category:'Clássicas', image:'assets/brocolis.webp', price:54.99, available:true, tag:'Clássica'},
