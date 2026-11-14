@@ -411,6 +411,11 @@
           toast(result.message||'Pizzaria fechada neste horário.');
           await refreshStoreStatus();return;
         }
+        if([400,403,409,422,429].includes(response.status)){
+          if(tab)tab.close();
+          toast(result.message||'Revise seu pedido e tente novamente.');
+          return;
+        }
         throw Error(result.message||'Não foi possível registrar o pré-pedido.');
       }
       reference=result.reference;
