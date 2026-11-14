@@ -1,3 +1,4 @@
+import {adminOrdersApi,createOrder} from './orders.js';
 /*
  * Doppio Admin — API segura (Cloudflare Workers + D1).
  * Nenhuma senha ou chave é mantida no repositório.
@@ -213,13 +214,14 @@ export async function adminApi(request,env,url){
     catch(_){return j({ok:true,ready:false,checks,databaseError:true,message:'Não foi possível acessar o banco D1.'});}
   }
   if(!isSetup(env))return error('admin_setup_required','Painel administrativo ainda não ativado. Configure D1 e credenciais no Cloudflare.',503);
-  if(!['GET','POST','PUT'].includes(request.method))return error('method_not_allowed','Método não permitido.',405);
+  if(!['GET','POST','PUT','DELETE'].includes(request.method))return error('method_not_allowed','Método não permitido.',405);
   if(request.method!=='GET' && request.headers.get('origin')!==url.origin)return error('origin','Origem não autorizada.',403);
   try{await ensureDb(env);}catch(_){return error('database_unavailable','Banco de dados indisponível.',503);}
   if(url.pathname==='/api/admin/login'&&request.method==='POST')return login(request,env);
   const authed=await validSession(request,env);
   if(!authed)return error('unauthorized','Entre novamente para continuar.',401);
   if(url.pathname==='/api/admin/me'&&request.method==='GET')return j({ok:true,authenticated:true});
+  if(url.pathname==='/api/admin/orders'||url.pathname.startsWith('/api/admin/orders/'))return adminOrdersApi(request,env,url);
   if(url.pathname==='/api/admin/logout'&&request.method==='POST')return j({ok:true},200,{'set-cookie':cookieHeader('',true)});
   if(url.pathname==='/api/admin/state'&&request.method==='GET'){
     try{return j({ok:true,state:await stateRow(env)});}
@@ -241,6 +243,17 @@ export async function adminApi(request,env,url){
     }catch(_){return error('database_error','Não foi possível salvar as alterações.',503);}
   }
   return error('not_found','Recurso não encontrado.',404);
+}
+export async function publicCreateOrder(request,env,url){
+  if(request.method!=='POST')return error('method_not_allowed','Use POST.',405);
+  if(!env.DOPPIO_DB)return error('database_unavailable','Registro de pedidos temporariamente indisponível.',503);
+  try{
+    const raw=await stateRow(env);
+    const catalog=validateState(raw,raw.revision||0);
+    return createOrder(request,env,url,catalog,resolveStoreStatus(catalog));
+  }catch(_){
+    return error('database_error','Não foi possível registrar a solicitação.',503);
+  }
 }
 export async function publicCatalogScript(env){
   const headers={'content-type':'application/javascript; charset=utf-8','cache-control':'no-store, max-age=0','x-content-type-options':'nosniff'};

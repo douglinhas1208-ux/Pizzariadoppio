@@ -20,7 +20,7 @@
   </header>
   <main class="admin-container">
     <div class="admin-heading">
-      <div><span class="section-eyebrow">PAINEL DE CONTROLE</span><h1>Seu negócio, <em>suas regras.</em></h1><p>Gerencie preços, pizzas e funcionamento em um único lugar.</p></div>
+      <div><span class="section-eyebrow">PAINEL DE CONTROLE</span><h1>Seu negócio, <em>suas regras.</em></h1><p>Acompanhe solicitações, preços, pizzas e horários em um único lugar.</p></div>
       <span class="admin-state-pill" id="connection-state" role="status">Verificando conexão...</span>
     </div>
 
@@ -71,8 +71,44 @@
         <div class="stat-card"><span class="stat-symbol">R$</span><small>Menor preço</small><strong id="stat-min">R$ 49,99</strong></div>
       </div>
 
+
+      <section class="admin-panel orders-panel" id="orders-panel">
+        <div class="panel-head">
+          <div>
+            <span class="panel-label">01 · CENTRAL DE PEDIDOS</span>
+            <h3>Solicitações recebidas</h3>
+            <p>Acompanhe solicitações criadas no checkout, organize o preparo e as entregas.</p>
+          </div>
+          <button type="button" class="admin-button admin-button-muted" id="orders-reload">↻ Atualizar</button>
+        </div>
+        <p class="orders-disclaimer">Uma solicitação é registrada <strong>antes</strong> de o cliente enviar a mensagem pelo WhatsApp. Ela não significa compra confirmada. Confirme com o cliente antes de iniciar o preparo.</p>
+        <div class="orders-stat-grid">
+          <div class="orders-stat orders-stat-new"><small>Aguardando confirmação</small><strong id="order-count-new">0</strong></div>
+          <div class="orders-stat"><small>Em preparação</small><strong id="order-count-preparo">0</strong></div>
+          <div class="orders-stat"><small>Em entrega</small><strong id="order-count-entrega">0</strong></div>
+          <div class="orders-stat"><small>Concluídos</small><strong id="order-count-concluido">0</strong></div>
+        </div>
+        <div class="orders-toolbar">
+          <label>Filtrar pedidos
+            <select id="orders-filter">
+              <option value="todos">Todos os status</option>
+              <option value="novo">Aguardando confirmação</option>
+              <option value="preparo">Em preparação</option>
+              <option value="entrega">Em entrega</option>
+              <option value="concluido">Concluídos</option>
+              <option value="cancelado">Cancelados</option>
+            </select>
+          </label>
+          <label>Buscar solicitação
+            <input type="search" id="orders-search" autocomplete="off" placeholder="Código ou nome do cliente">
+          </label>
+        </div>
+        <div class="orders-list" id="orders-list" aria-live="polite"><p class="orders-empty">Carregando solicitações...</p></div>
+        <p class="orders-footnote">Mostramos até 100 solicitações recentes. Os dados são restritos ao administrador e excluídos após 90 dias. Pedidos concluídos não representam, por si só, faturamento confirmado.</p>
+      </section>
+
       <section class="admin-panel">
-        <div class="panel-head"><div><span class="panel-label">01 · ATENDIMENTO</span><h3>Funcionamento da pizzaria</h3><p>Controle se o checkout aceita novos pedidos.</p></div><span id="order-badge" class="order-badge">Aceitando pedidos</span></div>
+        <div class="panel-head"><div><span class="panel-label">02 · ATENDIMENTO</span><h3>Funcionamento da pizzaria</h3><p>Controle se o checkout aceita novos pedidos.</p></div><span id="order-badge" class="order-badge">Aceitando pedidos</span></div>
         <label class="toggle-row" for="accepting-orders">
           <div><strong>Aceitar pedidos pelo cardápio</strong><small>Ao desligar, os sabores continuam visíveis, mas o checkout é pausado.</small></div>
           <input type="checkbox" role="switch" id="accepting-orders" checked>
@@ -102,7 +138,7 @@
       </section>
 
       <section class="admin-panel">
-        <div class="panel-head"><div><span class="panel-label">02 · CARDÁPIO</span><h3>Sabores e preços</h3><p>Edite preços, descrição, ingredientes, imagens disponíveis e estoque.</p></div><button type="button" class="admin-button admin-button-primary add-flavor" id="add-product">+ Novo sabor</button></div>
+        <div class="panel-head"><div><span class="panel-label">03 · CARDÁPIO</span><h3>Sabores e preços</h3><p>Edite preços, descrição, ingredientes, imagens disponíveis e estoque.</p></div><button type="button" class="admin-button admin-button-primary add-flavor" id="add-product">+ Novo sabor</button></div>
         <div class="product-manager" id="admin-products" aria-live="polite"></div>
         <p class="product-hint">Nesta primeira versão, as fotos são selecionadas dentre as imagens já publicadas. O envio de novas fotos será implementado separadamente.</p>
       </section>

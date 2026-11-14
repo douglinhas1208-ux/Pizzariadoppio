@@ -244,6 +244,7 @@
       <p class="cart-disclaimer">Na próxima etapa você confere os valores e só então abre o WhatsApp. O pedido depende da confirmação da pizzaria.</p></div>`;
   }
   function renderCart() {
+    checkoutKey=null;
     const stats = totals();
     $('cart-desktop').innerHTML = renderCartContents().replaceAll('{prefix}', 'desktop');
     $('cart-mobile').innerHTML = renderCartContents().replaceAll('{prefix}', 'mobile');
@@ -306,6 +307,7 @@
     root.querySelector(`[data-field="${key}"]`)?.focus();
   }
   let checkoutFromDrawer=false;
+  let checkoutKey=null,checkoutPending=false;
   // O preço de revisão é apenas referência quando existe personalização.
   function reviewHTML(){
     const stats=totals();
@@ -355,10 +357,11 @@
         </div>
       </section>
       ${warnings.length?`<div class="review-warning" role="note">${warnings.map(w=>`<p>⚠ ${esc(w)}</p>`).join('')}</div>`:''}
-      <p class="review-terms">O frete é estimado pela rua do CEP. Enviar pelo WhatsApp não confirma a compra: a pizzaria verificará disponibilidade, valor final e prazo.</p>`;
+      <p class="review-terms">Ao continuar, os dados informados serão registrados no painel da Doppio Pizzas para atendimento (retidos por até 90 dias). O WhatsApp abrirá com a mensagem pronta: você precisará tocar em Enviar. Abrir o WhatsApp não confirma o pedido; a pizzaria validará disponibilidade, frete, valor final e prazo.</p>`;
   }
   function openCheckoutReview(){
     checkoutFromDrawer=!$('cart-drawer').hidden;
+    if(!checkoutKey)checkoutKey=crypto.randomUUID();
     $('checkout-review-content').innerHTML=reviewHTML();
     openDialog('checkout-review');
     $('checkout-confirm')?.focus();
@@ -378,33 +381,74 @@
     if(shipping.status!=='ready' && shipping.status!=='error'){toast('Aguarde o cálculo do frete.');focusMissing('cep');return;}
     openCheckoutReview();
   }
-  function sendOrderWhatsApp(){
+  async function sendOrderWhatsApp(){
+    if(checkoutPending)return;
     if(!acceptingOrders)return toast('A pizzaria não está recebendo pedidos neste momento.');
     if($('checkout-review').hidden)return;
     if(!cart.length)return closeDialogs();
-    const s=totals();
+    const button=$('checkout-confirm');
+    const tab=window.open('about:blank','_blank');
+    if(tab){try{tab.document.body.textContent='Preparando sua consulta à Doppio Pizzas...';}catch(_){}}
+    checkoutPending=true;button.disabled=true;button.textContent='Registrando solicitação...';
+    let reference=null;
+    try{
+      if(!checkoutKey)checkoutKey=crypto.randomUUID();
+      const snapshot={
+        clientKey:checkoutKey,name:form.name.trim(),cep:cepDigits(),address:form.address.trim(),
+        number:form.numero.trim(),complement:form.complemento.trim(),payment:form.payment,
+        notes:form.notes.trim(),items:cart.map(i=>i.type==='half'
+          ? {type:'half',a:i.a,b:i.b,qty:i.qty,note:i.note||''}
+          : {type:'pizza',id:i.id,qty:i.qty,note:i.note||''}),
+        shippingFee:shipping.status==='ready'&&validPrice(shipping.quote?.fee)?shipping.quote.fee:null,
+        distanceKm:shipping.status==='ready'&&validPrice(shipping.quote?.distanceKm)?shipping.quote.distanceKm:null
+      };
+      const response=await fetch('/api/order',{method:'POST',credentials:'same-origin',cache:'no-store',
+        headers:{'content-type':'application/json'},body:JSON.stringify(snapshot)});
+      const result=await response.json();
+      if(!response.ok||!result.ok){
+        if(response.status===409&&result.code==='closed'){
+          if(tab)tab.close();
+          toast(result.message||'Pizzaria fechada neste horário.');
+          await refreshStoreStatus();return;
+        }
+        throw Error(result.message||'Não foi possível registrar o pré-pedido.');
+      }
+      reference=result.reference;
+    }catch(_){
+      // Não bloquear o WhatsApp se o registro do painel estiver indisponível.
+      toast('O registro no painel não foi concluído. Confirme sua solicitação diretamente pelo WhatsApp.');
+    }finally{
+      checkoutPending=false;button.disabled=false;button.textContent='Abrir WhatsApp →';
+    }
+    const stats=totals();
     const when=new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date());
-    const baseTotal=!s.pending&&validPrice(s.fee)?Math.round((s.subtotal+s.fee)*100)/100:null;
+    const baseTotal=!stats.pending&&validPrice(stats.fee)?Math.round((stats.subtotal+stats.fee)*100)/100:null;
     const lines=[
-      `🍕 *CONSULTA DE PEDIDO — ${cfg.business.name.toUpperCase()}*`,
-      `Enviado em: ${when}`,'',
+      '🍕 *CONSULTA DE PEDIDO — '+cfg.business.name.toUpperCase()+'*',
+      ...(reference?['*Código da solicitação: '+reference+'*']:[]),
+      'Preparado em: '+when,'',
       ...cart.flatMap(i=>[
-        `${i.qty}x ${formatName(i)} — ${validPrice(itemPrice(i))?money(Math.round(itemPrice(i)*i.qty*100)/100)+(i.note?' (preço base)':''):'preço a confirmar'}`,
-        ...(i.note?[`   ✎ Observação: ${i.note}`]:[])
+        i.qty+'x '+formatName(i)+' — '+(validPrice(itemPrice(i))
+          ?money(Math.round(itemPrice(i)*i.qty*100)/100)+(i.note?' (preço base)':'')
+          :'preço a confirmar'),
+        ...(i.note?['   ✎ Observação: '+i.note]:[])
       ]),
       '',
-      `Subtotal: ${s.pending?'a confirmar':money(s.subtotal)}`,
-      `Distância de referência do CEP: ${validPrice(s.km)?displayKm(s.km)+' km':'a confirmar'}`,
-      `Frete estimado pelo CEP: ${validPrice(s.fee)?money(s.fee):'a confirmar pela pizzaria'}`,
-      `Total ${s.customized?'base estimado':'estimado'}: ${baseTotal===null?'a confirmar':money(baseTotal)}`,'',
-      `*Cliente:* ${form.name.trim()}`,
-      `*Endereço:* ${form.address}, nº ${form.numero.trim()}${form.complemento.trim()?', '+form.complemento.trim():''} · CEP ${form.cep.trim()}`,
-      `*Pagamento:* ${form.payment}`,
-      `*Observações gerais:* ${form.notes.trim()||'Nenhuma'}`,'',
-      '_A Doppio Pizzas confirmará frete, valor final, prazo, disponibilidade e alterações antes de aceitar o pedido._'
+      'Subtotal: '+(stats.pending?'a confirmar':money(stats.subtotal)),
+      'Distância de referência do CEP: '+(validPrice(stats.km)?displayKm(stats.km)+' km':'a confirmar'),
+      'Frete estimado pelo CEP: '+(validPrice(stats.fee)?money(stats.fee):'a confirmar pela pizzaria'),
+      'Total '+(stats.customized?'base estimado':'estimado')+': '+(baseTotal===null?'a confirmar':money(baseTotal)),'',
+      '*Cliente:* '+form.name.trim(),
+      '*Endereço:* '+form.address+', nº '+form.numero.trim()+(form.complemento.trim()?', '+form.complemento.trim():'')+' · CEP '+form.cep.trim(),
+      '*Pagamento:* '+form.payment,
+      '*Observações gerais:* '+(form.notes.trim()||'Nenhuma'), '',
+      '_Envie esta mensagem para a Doppio Pizzas confirmar disponibilidade, frete, valor final e prazo antes de aceitar o pedido._'
     ];
-    window.open(whatsapp(lines.join('\n')),'_blank','noopener,noreferrer');
+    const link=whatsapp(lines.join('\n'));
+    if(tab&&!tab.closed)tab.location.href=link;
+    else window.location.href=link;
     closeDialogs();
+    if(reference)toast('Solicitação '+reference+' registrada! Envie a mensagem no WhatsApp.');
   }
   function closeDialogs() {
     ['overlay','cart-drawer','half-modal','customize-modal','checkout-review'].forEach(id => {
@@ -452,6 +496,7 @@
     const key=event.target.dataset?.field;
     if(!Object.hasOwn(form,key))return;
     form[key]=event.target.value;
+    checkoutKey=null;
     if(key==='cep'){
       form.cep=cepDigits().slice(0,8).replace(/^(\d{5})(\d)/,'$1-$2');
       event.target.value=form.cep;
@@ -467,7 +512,7 @@
     }
   };
   document.addEventListener('input',updateField);
-  document.addEventListener('change',event=>{if(event.target.dataset?.field==='payment')form.payment=event.target.value;});
+  document.addEventListener('change',event=>{if(event.target.dataset?.field==='payment'){form.payment=event.target.value;checkoutKey=null;}});
   $('header-cart').addEventListener('click',()=>openDialog('cart-drawer'));
   $('mobile-cart-button').addEventListener('click',()=>openDialog('cart-drawer'));
   $('close-drawer').addEventListener('click',closeDialogs);

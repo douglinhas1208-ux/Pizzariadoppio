@@ -63,3 +63,20 @@ O Doppio Admin pode ativar uma programação semanal em Funcionamento da pizzari
 - A API GET /api/store-status publica somente o estado de funcionamento, sem credenciais ou dados de clientes.
 - Não há pedidos agendados nessa etapa; fechar no site não impede contato direto pelo WhatsApp.
 - Os campos manuais de dias e horários continuam disponíveis para quando o agendamento for desligado.
+
+## Central de Pedidos — Fase 2
+
+A Central de Pedidos fica no dashboard /admin. O cardápio gera uma solicitação pelo endpoint POST /api/order ao acionar o botão final de abrir WhatsApp. Antes de abrir a conversa, o Worker registra dados no D1 com referência própria (DP-AAAAMMDD-XXXXXXXX), protegidos pelo login existente. O número aparece na mensagem pronta do WhatsApp. **O sistema não possui integração oficial de mensagens do WhatsApp:** registrar a solicitação e abrir o link wa.me não garantem que o cliente tenha enviado a mensagem, pago ou sido atendido. O status inicial é sempre `novo` — aguardando confirmação.
+
+Status disponíveis: `novo`, `preparo`, `entrega`, `concluido`, `cancelado`. No painel é possível consultar até 100 solicitações recentes, filtrar por status, pesquisar referência/nome, mudar o status e excluir uma solicitação. É necessário confirmar o pedido diretamente no WhatsApp antes de iniciar o preparo. Nenhuma mudança de status envia mensagens automaticamente.
+
+### Segurança e privacidade
+
+- GET /api/admin/orders e PUT/DELETE /api/admin/orders/:id exigem autenticação da sessão administrativa, e mutações exigem `Origin` correto.
+- O servidor valida catálogo, itens, quantidades, preços, período de funcionamento e formato do endereço ao receber uma solicitação; não confia nos preços de itens enviados pelo navegador.
+- Frete é **estimativa do CEP fornecida pelo navegador** a partir do endpoint de rotas existente; valor final e personalizações precisam ser confirmados antes da aceitação.
+- Um token de idempotência evita pedidos duplicados ao repetir o mesmo envio; limite por IP derivado de hash para coibir abuso.
+- Dados de pedidos são armazenados no D1 e eliminados após 90 dias por cron diário em UTC (`0 6 * * *`) ou durante a listagem administrativa. O administrador também pode excluí-los individualmente.
+- O cliente é informado no resumo que seus dados de entrega serão guardados pela pizzaria para atendimento, por até 90 dias.
+- Se o registro no painel falhar, o site pode abrir o WhatsApp como alternativa, avisando que o registro interno não foi concluído. Não há confirmação de entrega da mensagem.
+- Pedidos agendados, comprovante de pagamento, WhatsApp API e envio automático de notificações ainda não fazem parte desta etapa.

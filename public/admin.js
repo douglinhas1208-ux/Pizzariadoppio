@@ -10,6 +10,9 @@
     {path:'assets/mussarela.webp',name:'Mussarela'}
   ];
   let state=null,dirty=false,busy=false,toastTimer;
+  let orders=[],orderBusy=false;
+  const orderNames={novo:'Aguardando confirmação',preparo:'Em preparação',entrega:'Saiu para entrega',concluido:'Concluído',cancelado:'Cancelado'};
+  const orderMoney=cents=>Number.isInteger(cents)?money(cents/100):'A confirmar';
   const weekNames=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   const emptyWeek=()=>Array.from({length:7},()=>({enabled:false,start:'',end:''}));
   function normalizeSchedule(){
@@ -110,6 +113,62 @@
     $('admin-products').innerHTML=state.products.map(productHTML).join('');
     renderStats();
   }
+
+  function renderOrderCounts(stats={}){
+    for(const id of ['novo','preparo','entrega','concluido']){
+      $('order-count-'+id).textContent=Number(stats[id]||0);
+    }
+  }
+  function renderOrders(){
+    const filter=$('orders-filter').value,term=$('orders-search').value.trim().toLocaleLowerCase('pt-BR');
+    const result=orders.filter(o=>(filter==='todos'||o.status===filter)&&
+      (!term||o.customerName.toLocaleLowerCase('pt-BR').includes(term)||o.reference.toLocaleLowerCase('pt-BR').includes(term)));
+    if(!result.length){
+      $('orders-list').innerHTML='<p class="orders-empty">'+(orders.length?'Nenhuma solicitação corresponde a este filtro.':'Nenhuma solicitação registrada ainda. Quando um cliente preparar uma consulta pelo site, ela aparecerá aqui.')+'</p>';
+      return;
+    }
+    const dateTime=t=>new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(t*1000));
+    $('orders-list').innerHTML=result.map(o=>{
+      const list=o.items.map(item=>'<li><strong>'+item.qty+'x '+esc(item.name)+'</strong> <span>'+orderMoney(item.itemCents)+'</span>'
+        +(item.note?'<small>✎ '+esc(item.note)+'</small>':'')+'</li>').join('');
+      const addr=[o.address,'nº '+o.number,o.complement,'CEP '+o.cep].filter(Boolean).join(' · ');
+      const total=orderMoney(o.totalCents);
+      return '<details class="order-entry order-'+esc(o.status)+'" data-order-id="'+esc(o.id)+'">'
+        +'<summary class="order-entry-summary"><span class="order-entry-main"><strong>'+esc(o.reference)+'</strong><small>'+esc(dateTime(o.createdAt))+' · '+esc(o.customerName)+'</small></span>'
+        +'<span class="order-entry-side"><span class="order-status-badge">'+esc(orderNames[o.status]||o.status)+'</span><strong>'+total+'</strong></span></summary>'
+        +'<div class="order-entry-details">'
+          +'<div class="order-details-grid"><div><small>Cliente</small><strong>'+esc(o.customerName)+'</strong></div>'
+          +'<div><small>Forma de pagamento</small><strong>'+esc(o.payment)+'</strong></div>'
+          +'<div class="order-wide"><small>Endereço de entrega</small><strong>'+esc(addr)+'</strong></div>'
+          +(o.notes?'<div class="order-wide"><small>Observações gerais</small><strong>'+esc(o.notes)+'</strong></div>':'')
+          +'</div>'
+          +'<ul class="order-items">'+list+'</ul>'
+          +'<div class="order-amounts">'
+            +'<span>Pizzas (preço base) <strong>'+orderMoney(o.subtotalCents)+'</strong></span>'
+            +'<span>Frete estimado <strong>'+orderMoney(o.shippingCents)+'</strong></span>'
+            +'<span>Total '+(o.hasCustomization?'base estimado':'estimado')+' <strong>'+total+'</strong></span>'
+          +'</div>'
+          +'<div class="order-actions"><label>Atualizar status<select data-order-status="'+esc(o.id)+'">'
+          +Object.keys(orderNames).map(key=>'<option value="'+key+'"'+(key===o.status?' selected':'')+'>'+esc(orderNames[key])+'</option>').join('')
+          +'</select></label>'
+          +'<button type="button" class="order-delete" data-order-delete="'+esc(o.id)+'">Excluir solicitação</button></div>'
+          +'<p class="order-smallprint">O status é administrado pela pizzaria. Nenhuma mensagem é enviada automaticamente ao cliente.</p>'
+        +'</div></details>';
+    }).join('');
+  }
+  async function loadOrders(){
+    if(orderBusy)return;
+    try{
+      const data=await api('orders');
+      orders=data.orders||[];
+      renderOrderCounts(data.stats||{});
+      renderOrders();
+    }catch(e){
+      $('orders-list').innerHTML='<p class="orders-empty">Não foi possível carregar as solicitações. Clique em Atualizar.</p>';
+      if(e.status===401)toast('Sua sessão expirou. Entre novamente no painel.',true);
+    }
+  }
+
   function render(){
     $('opening-days').value=state.openDays;
     $('opening-hours').value=state.openHours;
@@ -124,6 +183,7 @@
     state=result.state;
     render();
     screen('admin-dashboard');
+    await loadOrders();
   }
   async function bootstrap(){
     screen('admin-loading');
@@ -169,6 +229,41 @@
       $('login-error').hidden=false;
     }finally{btn.disabled=false;}
   });
+
+  $('orders-reload').addEventListener('click',async()=>{await loadOrders();toast('Lista de solicitações atualizada.');});
+  $('orders-filter').addEventListener('change',renderOrders);
+  $('orders-search').addEventListener('input',renderOrders);
+  $('orders-list').addEventListener('change',async event=>{
+    const select=event.target.closest('[data-order-status]');
+    if(!select||orderBusy)return;
+    const id=select.dataset.orderStatus,item=orders.find(o=>o.id===id);
+    if(!item)return;
+    const oldStatus=item.status,newStatus=select.value;
+    if(oldStatus===newStatus)return;
+    orderBusy=true;select.disabled=true;
+    try{
+      await api('orders/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify({status:newStatus})});
+      item.status=newStatus;
+      await loadOrders();
+      toast('Status de '+item.reference+' atualizado.');
+    }catch(e){select.value=oldStatus;toast(e.message,true);}
+    finally{orderBusy=false;select.disabled=false;}
+  });
+  $('orders-list').addEventListener('click',async event=>{
+    const btn=event.target.closest('[data-order-delete]');
+    if(!btn||orderBusy)return;
+    const id=btn.dataset.orderDelete,item=orders.find(o=>o.id===id);
+    if(!item||!confirm('Excluir definitivamente a solicitação '+item.reference+' e os dados do cliente?'))return;
+    orderBusy=true;btn.disabled=true;
+    try{
+      await api('orders/'+encodeURIComponent(id),{method:'DELETE',body:'{}'});
+      orders=orders.filter(o=>o.id!==id);
+      await loadOrders();
+      toast('Solicitação excluída permanentemente.');
+    }catch(e){btn.disabled=false;toast(e.message,true);}
+    finally{orderBusy=false;}
+  });
+
   $('setup-refresh').addEventListener('click',bootstrap);
   $('logout').addEventListener('click',async()=>{
     if(dirty&&!confirm('Sair sem salvar as alterações?'))return;

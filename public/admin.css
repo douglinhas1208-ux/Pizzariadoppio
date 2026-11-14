@@ -33,3 +33,67 @@
   .week-time{gap:5px;font-size:.7rem}
   .week-time input{padding:8px 5px}
 }
+
+/* Central de Pedidos: controle protegido dos pré-pedidos */
+.orders-panel{scroll-margin-top:85px}
+.orders-disclaimer{background:#fff4e9;border:1px solid #f0d6bb;border-left:4px solid #e7662b;color:#71543b;font-size:.78rem;line-height:1.6;padding:13px 16px;border-radius:10px;margin:4px 0 20px}
+.orders-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0 20px}
+.orders-stat{display:grid;gap:8px;padding:14px 16px;border:1px solid #e7dfd5;border-radius:13px;background:#fffdfb;min-height:100px}
+.orders-stat small{color:#70665a;font-size:.73rem;line-height:1.4;font-weight:650}
+.orders-stat strong{font-size:1.7rem;font-weight:900;color:#302118;font-variant-numeric:tabular-nums}
+.orders-stat-new{background:#fff5ec;border-color:#f2cfb5}
+.orders-stat-new strong{color:#c65820}
+.orders-toolbar{display:grid;grid-template-columns:1fr 1.4fr;gap:14px;margin:0 0 20px}
+.orders-toolbar label{display:grid;gap:7px;font-size:.78rem;color:#67574a;font-weight:800}
+.orders-toolbar input,.orders-toolbar select,.order-actions select{font:inherit;width:100%;min-height:41px;border:1px solid #dcd0c4;border-radius:9px;background:#fff;color:#30231d;padding:9px 12px}
+.orders-list{display:grid;gap:11px}
+.orders-empty{text-align:center;padding:28px 15px;background:#fbf9f6;border:1px dashed #e1d5ca;border-radius:12px;color:#756b62;font-size:.86rem}
+.order-entry{border:1px solid #e7ddd2;border-radius:13px;background:#fff;overflow:hidden}
+.order-entry[open]{box-shadow:0 9px 24px #2515090b}
+.order-entry-summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px}
+.order-entry-summary::-webkit-details-marker{display:none}
+.order-entry-summary:hover{background:#fffaf7}
+.order-entry-main,.order-entry-side{display:grid;gap:5px}
+.order-entry-main strong{font-size:.9rem;color:#32251b;font-weight:850}
+.order-entry-main small{font-size:.78rem;color:#7c6d5e}
+.order-entry-side{text-align:right;justify-items:end}
+.order-entry-side>strong{font-size:.97rem;color:#38281f}
+.order-status-badge{display:inline-flex;border-radius:99px;padding:4px 9px;font-weight:750;font-size:.7rem;background:#f6ebe0;color:#8b5728;white-space:nowrap}
+.order-preparo .order-status-badge{background:#fff0d4;color:#865600}
+.order-entrega .order-status-badge{background:#e6f3ff;color:#225b87}
+.order-concluido .order-status-badge{background:#e6f4e7;color:#266137}
+.order-cancelado .order-status-badge{background:#f7e9e8;color:#983b33}
+.order-entry-details{border-top:1px solid #eee4da;padding:17px;display:grid;gap:17px}
+.order-details-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.order-details-grid>div{display:grid;gap:5px}
+.order-details-grid small{font-size:.71rem;color:#806e5e;font-weight:750}
+.order-details-grid strong{font-size:.85rem;font-weight:650;color:#3e3028;overflow-wrap:anywhere}
+.order-details-grid .order-wide{grid-column:1/-1}
+.order-items{padding:12px 16px;margin:0;list-style:none;display:grid;gap:11px;background:#fffaf6;border:1px solid #f0e4db;border-radius:10px}
+.order-items li{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;font-size:.81rem}
+.order-items li strong{color:#392b23}
+.order-items li span{font-weight:750}
+.order-items li small{flex-basis:100%;color:#845c41}
+.order-amounts{display:grid;gap:7px}
+.order-amounts span{display:flex;justify-content:space-between;gap:12px;font-size:.81rem;color:#716357}
+.order-amounts span:last-child{padding-top:10px;border-top:1px solid #e8dfd4;font-size:.9rem;color:#36281e;font-weight:800}
+.order-amounts strong{font-variant-numeric:tabular-nums;color:#342820}
+.order-actions{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.order-actions label{display:grid;gap:5px;min-width:220px;font-size:.76rem;font-weight:750;color:#68584c}
+.order-delete{background:transparent;border:1px solid #e1bbb5;border-radius:9px;color:#9c3b31;padding:9px 12px;font-size:.73rem;font-weight:800;cursor:pointer}
+.order-delete:hover{background:#fff0ed}
+.order-smallprint,.orders-footnote{font-size:.73rem;line-height:1.6;color:#85766a}
+.orders-footnote{margin:16px 0 0}
+@media(max-width:700px){
+ .orders-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .orders-stat{min-height:90px;padding:12px}
+ .orders-toolbar{grid-template-columns:1fr;gap:9px}
+ .order-entry-summary{padding:12px}
+ .order-entry-main strong{font-size:.78rem}
+ .order-entry-main small{font-size:.7rem}
+ .order-entry-side>strong{font-size:.85rem}
+ .order-status-badge{white-space:normal;line-height:1.2;font-size:.66rem}
+ .order-entry-details{padding:13px}
+ .order-details-grid{grid-template-columns:1fr}
+ .order-actions label{width:100%}
+}
