@@ -109,7 +109,21 @@
     screen('admin-loading');
     try{
       const result=await api('status');
-      if(!result.ready){screen('admin-setup');return;}
+      if(!result.ready){
+        screen('admin-setup');
+        const details=$('setup-diagnostics');
+        const checks=result.checks;
+        if(checks){
+          const lines=[
+            ['Banco de dados D1',checks.database],
+            ['ADMIN_PASSWORD (pelo menos 16 caracteres)',checks.password],
+            ['ADMIN_SESSION_SECRET (pelo menos 32 caracteres)',checks.sessionSecret]
+          ];
+          details.innerHTML=lines.map(([label,ready])=>'<li class="'+(ready?'setup-ok':'setup-missing')+'">'+(ready?'✓ Configurado: ':'⚠ Pendente: ')+label+'</li>').join('');
+          if(result.databaseError)details.insertAdjacentHTML('beforeend','<li class="setup-missing">⚠ Não foi possível acessar o banco de dados.</li>');
+        }else details.textContent=result.message||'Verifique as configurações do Worker.';
+        return;
+      }
       try{
         await api('me');
         await loadState();

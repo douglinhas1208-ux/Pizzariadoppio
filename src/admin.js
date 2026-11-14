@@ -24,7 +24,13 @@ function j(data,status=200,headers={}){
   return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer',...headers}});
 }
 const error=(code,message,status=400)=>j({ok:false,code,message},status);
-const isSetup=env=>Boolean(env.DOPPIO_DB && typeof env.ADMIN_PASSWORD==='string' && env.ADMIN_PASSWORD.length>=16 && typeof env.ADMIN_SESSION_SECRET==='string' && env.ADMIN_SESSION_SECRET.length>=32);
+// Apenas flags de prontidão; nunca inclui nomes de contas, valores, tamanhos ou hashes de secrets.
+const setupChecks=env=>({
+  database:Boolean(env.DOPPIO_DB),
+  password:typeof env.ADMIN_PASSWORD==='string'&&env.ADMIN_PASSWORD.length>=16,
+  sessionSecret:typeof env.ADMIN_SESSION_SECRET==='string'&&env.ADMIN_SESSION_SECRET.length>=32
+});
+const isSetup=env=>Object.values(setupChecks(env)).every(Boolean);
 let dbReady;
 async function ensureDb(env){
   if(!dbReady){
@@ -139,9 +145,10 @@ async function login(req,env){
 }
 export async function adminApi(request,env,url){
   if(url.pathname==='/api/admin/status'&&request.method==='GET'){
-    if(!isSetup(env))return j({ok:true,ready:false,message:'Conclua a configuração do D1 e das credenciais no Cloudflare.'});
-    try{await ensureDb(env);return j({ok:true,ready:true});}
-    catch(_){return j({ok:true,ready:false,message:'Banco de dados temporariamente indisponível.'});}
+    const checks=setupChecks(env);
+    if(!isSetup(env))return j({ok:true,ready:false,checks,message:'Há configurações pendentes no Cloudflare.'});
+    try{await ensureDb(env);return j({ok:true,ready:true,checks});}
+    catch(_){return j({ok:true,ready:false,checks,databaseError:true,message:'Não foi possível acessar o banco D1.'});}
   }
   if(!isSetup(env))return error('admin_setup_required','Painel administrativo ainda não ativado. Configure D1 e credenciais no Cloudflare.',503);
   if(!['GET','POST','PUT'].includes(request.method))return error('method_not_allowed','Método não permitido.',405);
