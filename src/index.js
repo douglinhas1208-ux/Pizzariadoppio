@@ -5,6 +5,8 @@
  */
 const ORS = 'https://api.heigit.org';
 const SHOP = 'Rua Firmino Morgado, 60, Jardim Brasília, São Paulo, SP, Brasil';
+// Definir as coordenadas somente após confirmação do ponto exato pela pizzaria.
+const SHOP_COORDS = null;
 const MAX_KM = 10;
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status,
@@ -102,13 +104,8 @@ async function frete(request,env,url) {
     const address=await cepLookup(cep);
     if(!address)return siteError('cep_not_found','CEP não localizado. Confira os números.',422);
     if(address.state!=='SP')return siteError('outside_state','Endereço fora da área de entrega.',422);
-    stage='origin';
-    const origin=await geocodeAddress(env.ORS_API_KEY,'Rua Firmino Morgado','60','Jardim Brasília','São Paulo','SP','03583-000');
-    if(!origin || origin.quality!=='number'){
-      return siteError('origin_setup','A localização exata de saída da pizzaria precisa ser confirmada no mapa antes de liberar o frete.',503,{
-        originSuggestion:origin?{lon:origin.point[0],lat:origin.point[1],quality:origin.quality,label:origin.label}:null
-      });
-    }
+    const originPoint=SHOP_COORDS;
+    if(!validCoord(originPoint))return siteError('origin_setup','Confirme o ponto exato de saída da pizzaria para ativar frete automático.',503);
     stage='destination';
     const candidate=await geocodeAddress(env.ORS_API_KEY,address.street,number,address.neighborhood,address.city,address.state,cep);
     if(!candidate)return siteError('destination_not_found','Não conseguimos localizar a rua com segurança. Confira o CEP e procure a pizzaria.',422,{address});
@@ -122,11 +119,11 @@ async function frete(request,env,url) {
       if(haversine(candidate.point,pin)>1.5)return siteError('pin_too_far','O ponto marcado está distante da rua informada. Confira o CEP.',422);
       destination=pin;
     }
-    if(haversine(origin.point,destination)>MAX_KM+2){
+    if(haversine(originPoint,destination)>MAX_KM+2){
       return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address});
     }
     stage='route';
-    const meters=await route(env.ORS_API_KEY,origin.point,destination);
+    const meters=await route(env.ORS_API_KEY,originPoint,destination);
     const km=meters/1000;
     if(km>MAX_KM+1e-6)return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address,distanceKm:Math.round(km*100)/100});
     const fee=5+Math.max(0,Math.ceil(km-5-1e-9));
@@ -139,28 +136,6 @@ async function frete(request,env,url) {
 export default {
   async fetch(request,env) {
     const url=new URL(request.url);
-    // DIAGNÓSTICO TRANSITÓRIO: remover após a validação do ponto de saída.
-    if(url.pathname==='/api/qa-geocoding'){
-      if(!env.ORS_API_KEY)return json({error:'unconfigured'},503);
-      const queries=[
-        'Rua Firmino Morgado 60, Jardim Brasília, São Paulo, Brasil',
-        'Rua Firmino Morgado, Jardim Brasília, São Paulo, Brasil',
-        '03583-000, São Paulo, Brasil'
-      ];
-      const results=[];
-      for(const text of queries){
-        try {
-          const u=new URL('https://api.heigit.org/pelias/v1/search');
-          u.searchParams.set('text',text);u.searchParams.set('size','5');
-          const d=await getJSON(u.toString(),{headers:{Authorization:env.ORS_API_KEY}},9000);
-          results.push({query:text,features:(d.features||[]).slice(0,5).map(f=>({
-            label:f.properties?.label,street:f.properties?.street,housenumber:f.properties?.housenumber,
-            layer:f.properties?.layer,confidence:f.properties?.confidence,coords:f.geometry?.coordinates
-          }))});
-        }catch(e){results.push({query:text,error:e.status||e.message})}
-      }
-      return json({results});
-    }
     if(url.pathname==='/api/status'){
       return json({service:'doppio-frete',configured:Boolean(env.ORS_API_KEY)});
     }
