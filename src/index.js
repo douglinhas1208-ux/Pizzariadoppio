@@ -152,7 +152,7 @@ export default {
     const url=new URL(request.url);
     if(url.pathname==='/admin'||url.pathname==='/admin/'||url.pathname==='/admin.html'){
       if(request.method!=='GET')return siteError('method','Use GET.',405);
-      const assetUrl=new URL('/admin.html',url.origin);
+      const assetUrl=new URL('/admin',url.origin);
       const response=await env.ASSETS.fetch(new Request(assetUrl.toString(),request));
       const headers=new Headers(response.headers);
       headers.set('cache-control','no-store');
