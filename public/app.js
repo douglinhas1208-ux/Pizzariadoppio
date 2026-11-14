@@ -128,6 +128,11 @@
       el.textContent=text;el.classList.toggle('delivery-warning',shipping.status==='error'||shipping.status==='outside');
       el.classList.toggle('delivery-success',shipping.status==='ready');
     });
+    document.querySelectorAll('[data-delivery-pending]').forEach(el=>{
+      el.textContent=shipping.status==='ready'
+        ? 'Frete calculado pela rota. Os preços das pizzas e as alterações continuam sujeitos à confirmação.'
+        : 'O frete será calculado pela rota das ruas antes do envio do pedido.';
+    });
     document.querySelectorAll('[data-delivery-fee]').forEach(el=>{el.textContent=shipping.status==='outside'?'Fora da área':validPrice(t.fee)?money(t.fee):'A calcular';});
     document.querySelectorAll('[data-delivery-label]').forEach(el=>{el.textContent=validPrice(t.fee)?'Frete calculado':'Taxa de entrega';});
     document.querySelectorAll('[data-order-total]').forEach(el=>{el.textContent=t.total===null?'A confirmar':money(t.total);});
@@ -203,7 +208,7 @@
       <div class="summary-row"><span>${s.pending?'Parcial dos sabores com preço':s.customized?'Subtotal base estimado':'Subtotal'}</span><strong>${s.pending&&!s.subtotal?'A confirmar':money(s.subtotal)}</strong></div>
       <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete calculado':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':validPrice(s.fee)?money(s.fee):'A calcular'}</strong></div>
       <div class="summary-row summary-total"><span>Total estimado</span><strong data-order-total>${s.total===null?'A confirmar':money(s.total)}</strong></div>
-      <div class="cart-pending">${shipping.status==='ready'?'Frete calculado pela rota. Preços das pizzas e alterações ainda precisam de confirmação.':'O frete será calculado pela rota das ruas antes do envio do pedido.'}</div>`:'';
+      <div class="cart-pending" data-delivery-pending>${shipping.status==='ready'?'Frete calculado pela rota. Preços das pizzas e alterações ainda precisam de confirmação.':'O frete será calculado pela rota das ruas antes do envio do pedido.'}</div>`:'';
     const fields=cart.length?`<form class="order-form" onsubmit="return false">
       <label for="{prefix}-name">Seu nome <span class="required-mark">*</span></label>
       <input id="{prefix}-name" data-field="name" autocomplete="name" maxlength="70" placeholder="Como podemos chamar você?" value="${esc(form.name)}" required>
