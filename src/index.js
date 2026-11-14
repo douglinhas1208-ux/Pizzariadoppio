@@ -139,6 +139,28 @@ async function frete(request,env,url) {
 export default {
   async fetch(request,env) {
     const url=new URL(request.url);
+    // DIAGNÓSTICO TRANSITÓRIO: remover após a validação do ponto de saída.
+    if(url.pathname==='/api/qa-geocoding'){
+      if(!env.ORS_API_KEY)return json({error:'unconfigured'},503);
+      const queries=[
+        'Rua Firmino Morgado 60, Jardim Brasília, São Paulo, Brasil',
+        'Rua Firmino Morgado, Jardim Brasília, São Paulo, Brasil',
+        '03583-000, São Paulo, Brasil'
+      ];
+      const results=[];
+      for(const text of queries){
+        try {
+          const u=new URL('https://api.heigit.org/pelias/v1/search');
+          u.searchParams.set('text',text);u.searchParams.set('size','5');
+          const d=await getJSON(u.toString(),{headers:{Authorization:env.ORS_API_KEY}},9000);
+          results.push({query:text,features:(d.features||[]).slice(0,5).map(f=>({
+            label:f.properties?.label,street:f.properties?.street,housenumber:f.properties?.housenumber,
+            layer:f.properties?.layer,confidence:f.properties?.confidence,coords:f.geometry?.coordinates
+          }))});
+        }catch(e){results.push({query:text,error:e.status||e.message})}
+      }
+      return json({results});
+    }
     if(url.pathname==='/api/status'){
       return json({service:'doppio-frete',configured:Boolean(env.ORS_API_KEY)});
     }
