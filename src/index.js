@@ -98,15 +98,18 @@ async function frete(request,env,url) {
   const pin=input?.pin;
   if(pin!=null&&!validCoord(pin))return siteError('invalid_pin','Ponto do mapa inválido.');
   try {
+    let stage='cep';
     const address=await cepLookup(cep);
     if(!address)return siteError('cep_not_found','CEP não localizado. Confira os números.',422);
     if(address.state!=='SP')return siteError('outside_state','Endereço fora da área de entrega.',422);
+    stage='origin';
     const origin=await geocodeAddress(env.ORS_API_KEY,'Rua Firmino Morgado','60','Jardim Brasília','São Paulo','SP','03583-000');
     if(!origin || origin.quality!=='number'){
       return siteError('origin_setup','A localização exata de saída da pizzaria precisa ser confirmada no mapa antes de liberar o frete.',503,{
         originSuggestion:origin?{lon:origin.point[0],lat:origin.point[1],quality:origin.quality,label:origin.label}:null
       });
     }
+    stage='destination';
     const candidate=await geocodeAddress(env.ORS_API_KEY,address.street,number,address.neighborhood,address.city,address.state,cep);
     if(!candidate)return siteError('destination_not_found','Não conseguimos localizar a rua com segurança. Confira o CEP e procure a pizzaria.',422,{address});
     if(candidate.quality!=='number' && !pin){
@@ -122,6 +125,7 @@ async function frete(request,env,url) {
     if(haversine(origin.point,destination)>MAX_KM+2){
       return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address});
     }
+    stage='route';
     const meters=await route(env.ORS_API_KEY,origin.point,destination);
     const km=meters/1000;
     if(km>MAX_KM+1e-6)return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address,distanceKm:Math.round(km*100)/100});
@@ -129,7 +133,7 @@ async function frete(request,env,url) {
     return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision:pin?'pin_confirmado':'numero_localizado',origin:'Rua Firmino Morgado, 60',routeMode:'driving-car'});
   } catch(e) {
     if(e.status===403 || e.status===401)return siteError('provider_access','O serviço de rotas recusou a chave. Confira o plano e a ativação da API.',503);
-    return siteError('provider_unavailable','Não foi possível calcular a rota agora. Tente novamente ou confirme pelo WhatsApp.',503);
+    return siteError('provider_unavailable_'+stage,'Não foi possível consultar o serviço de '+stage+' agora.',503,{upstreamStatus:typeof e.status==='number'?e.status:null});
   }
 }
 export default {
