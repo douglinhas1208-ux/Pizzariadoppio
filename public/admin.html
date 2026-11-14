@@ -79,7 +79,10 @@
             <h3>Solicitações recebidas</h3>
             <p>Acompanhe solicitações criadas no checkout, organize o preparo e as entregas.</p>
           </div>
-          <button type="button" class="admin-button admin-button-muted" id="orders-reload">↻ Atualizar</button>
+          <div class="orders-refresh-controls">
+            <span id="orders-live-state" class="orders-live-state" role="status" aria-live="polite">Atualização automática a cada 10s</span>
+            <button type="button" class="admin-button admin-button-muted" id="orders-reload">↻ Atualizar</button>
+          </div>
         </div>
         <p class="orders-disclaimer">Uma solicitação é registrada <strong>antes</strong> de o cliente enviar a mensagem pelo WhatsApp. Ela não significa compra confirmada. Confirme com o cliente antes de iniciar o preparo.</p>
         <div class="orders-stat-grid">

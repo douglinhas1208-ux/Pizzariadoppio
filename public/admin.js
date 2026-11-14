@@ -10,7 +10,9 @@
     {path:'assets/mussarela.webp',name:'Mussarela'}
   ];
   let state=null,dirty=false,busy=false,toastTimer;
-  let orders=[],orderBusy=false;
+  let orders=[],orderBusy=false,ordersRequest=null,ordersSignature='',ordersLoaded=false;
+  let ordersGeneration=0;
+  const ORDER_REFRESH_MS=10000;
   const orderNames={novo:'Aguardando confirmação',preparo:'Em preparação',entrega:'Saiu para entrega',concluido:'Concluído',cancelado:'Cancelado'};
   const orderMoney=cents=>Number.isInteger(cents)?money(cents/100):'A confirmar';
   const weekNames=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
@@ -156,16 +158,57 @@
         +'</div></details>';
     }).join('');
   }
-  async function loadOrders(){
-    try{
-      const data=await api('orders');
-      orders=data.orders||[];
-      renderOrderCounts(data.stats||{});
-      renderOrders();
-    }catch(e){
-      $('orders-list').innerHTML='<p class="orders-empty">Não foi possível carregar as solicitações. Clique em Atualizar.</p>';
-      if(e.status===401)toast('Sua sessão expirou. Entre novamente no painel.',true);
+  // Atualização periódica: não altera filtros, busca ou detalhes abertos.
+  async function loadOrders({silent=false}={}){
+    if(ordersRequest){
+      if(silent)return;
+      await ordersRequest;
     }
+    if(silent && (orderBusy||document.hidden||$('admin-dashboard').hidden||
+      document.activeElement?.matches?.('[data-order-status]')))return;
+    const generation=ordersGeneration;
+    const request=(async()=>{
+      try{
+        const data=await api('orders');
+        if(generation!==ordersGeneration||$('admin-dashboard').hidden)return;
+        const nextOrders=Array.isArray(data.orders)?data.orders:[];
+        const nextStats=data.stats||{};
+        const nextSignature=JSON.stringify([nextOrders,nextStats]);
+        const changed=!ordersLoaded||nextSignature!==ordersSignature;
+        const previouslyLoaded=ordersLoaded;
+        const previousIds=new Set(orders.map(o=>o.id));
+        const newCount=previouslyLoaded?nextOrders.filter(o=>!previousIds.has(o.id)&&o.status==='novo').length:0;
+        if(changed){
+          const openedIds=new Set([...$('orders-list').querySelectorAll('.order-entry[open]')].map(el=>el.dataset.orderId));
+          orders=nextOrders;
+          ordersSignature=nextSignature;
+          ordersLoaded=true;
+          renderOrderCounts(nextStats);
+          renderOrders();
+          for(const entry of $('orders-list').querySelectorAll('.order-entry')){
+            if(openedIds.has(entry.dataset.orderId))entry.open=true;
+          }
+        }
+        const localTime=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
+        $('orders-live-state').textContent='✓ Sincronizado às '+localTime+' · atualiza a cada 10s';
+        $('orders-live-state').classList.remove('offline');
+        if(silent&&newCount)toast(newCount===1?'🍕 Nova solicitação recebida!':'🍕 '+newCount+' novas solicitações recebidas!');
+      }catch(e){
+        if(generation!==ordersGeneration)return;
+        $('orders-live-state').textContent='Sem conexão · tentando novamente';
+        $('orders-live-state').classList.add('offline');
+        if(e.status===401){
+          screen('admin-login');
+          toast('Sua sessão expirou. Entre novamente no painel.',true);
+        }else if(!silent && !ordersLoaded){
+          $('orders-list').innerHTML='<p class="orders-empty">Não foi possível carregar as solicitações. Clique em Atualizar.</p>';
+        }else if(!silent){
+          toast('Não foi possível atualizar as solicitações. Tentaremos novamente.',true);
+        }
+      }
+    })();
+    ordersRequest=request;
+    try{await request;}finally{if(ordersRequest===request)ordersRequest=null;}
   }
 
   function render(){
@@ -267,6 +310,9 @@
   $('logout').addEventListener('click',async()=>{
     if(dirty&&!confirm('Sair sem salvar as alterações?'))return;
     try{await api('logout',{method:'POST',body:'{}'});}catch(_){}
+    ordersGeneration++;
+    orders=[];ordersLoaded=false;ordersSignature='';
+    $('orders-live-state').textContent='Atualização automática a cada 10s';
     state=null;dirty=false;screen('admin-login');toast('Você saiu do painel.');
   });
   for(const [id,key] of [['opening-days','openDays'],['opening-hours','openHours'],['delivery-eta','etaMinutes']]){
@@ -385,6 +431,12 @@
     if(dirty&&!confirm('Descartar alterações não salvas e recarregar?'))return;
     try{await loadState();toast('Dados atualizados.');}catch(error){toast(error.message,true);}
   });
+  // Só verifica quando o painel está aberto e visível; retoma ao voltar à aba.
+  window.setInterval(()=>{void loadOrders({silent:true});},ORDER_REFRESH_MS);
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)void loadOrders({silent:true});
+  });
+  window.addEventListener('focus',()=>{void loadOrders({silent:true});});
   window.addEventListener('beforeunload',event=>{
     if(!dirty)return;
     event.preventDefault();event.returnValue='';

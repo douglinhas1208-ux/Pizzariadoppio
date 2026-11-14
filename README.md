@@ -80,3 +80,11 @@ Status disponíveis: `novo`, `preparo`, `entrega`, `concluido`, `cancelado`. No 
 - O cliente é informado no resumo que seus dados de entrega serão guardados pela pizzaria para atendimento, por até 90 dias.
 - Se o registro no painel falhar, o site pode abrir o WhatsApp como alternativa, avisando que o registro interno não foi concluído. Não há confirmação de entrega da mensagem.
 - Pedidos agendados, comprovante de pagamento, WhatsApp API e envio automático de notificações ainda não fazem parte desta etapa.
+
+## Atualização automática da Central de Pedidos
+
+O painel administrativo consulta os pedidos **a cada 10 segundos** enquanto a aba está visível e o administrador autenticado. Também faz uma consulta ao retornar à aba ou ao focar a janela. Não é necessário atualizar a página com F5. Quando uma solicitação nova aparece, uma notificação visual é exibida.
+
+O painel só reconstrói a lista quando os dados mudam, preservando filtro, pesquisa e o estado aberto dos detalhes da solicitação. Durante a alteração de status e enquanto o seletor de status está em foco, a sincronização automática espera para não interromper o operador. A última sincronização e problemas de conexão são mostrados na seção de pedidos. O botão manual "Atualizar" permanece disponível.
+
+Esta é **atualização periódica (quase em tempo real)**, não uma conexão push nem uma integração automática com mensagens do WhatsApp.
