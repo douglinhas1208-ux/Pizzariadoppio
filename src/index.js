@@ -56,27 +56,30 @@ function geocodeInfo(feature,street,number) {
   const fullAddress=p.layer==='address' && sameNumber;
   return {point:coord,quality:fullAddress?'number':'street',label:p.label||'',layer:p.layer||'',housenumber:n,confidence:typeof p.confidence==='number'?p.confidence:null};
 }
-async function geocodeAddress(apiKey,street,number,neighborhood,city,state) {
+// CEP identifica a rua ou trecho de rua: nunca afirmar precisão de uma residência.
+async function geocodeByCep(apiKey,address) {
+  const {street,neighborhood,city,state}=address;
   const queries=[
-    [street+' '+number,neighborhood,city,state,'Brasil'].filter(Boolean).join(', '),
     [street,neighborhood,city,state,'Brasil'].filter(Boolean).join(', '),
     [street,city,state,'Brasil'].filter(Boolean).join(', ')
   ];
-  const matches=[];
-  for(const text of queries){
-    const url=new URL(ORS+'/pelias/v1/search');
-    url.searchParams.set('text',text);
-    url.searchParams.set('size','8');
-    url.searchParams.set('boundary.country','BRA');
-    url.searchParams.set('focus.point.lat',String(SHOP_COORDS[1]));
-    url.searchParams.set('focus.point.lon',String(SHOP_COORDS[0]));
-    const data=await getJSON(url.toString(),{headers:{Authorization:apiKey}},9500);
-    matches.push(...(data.features||[]).map(f=>geocodeInfo(f,street,number)).filter(Boolean));
-    if(matches.some(m=>m.quality==='number'))break;
+  let matches=[];
+  for(const searchText of queries){
+    const uri=new URL(ORS+'/pelias/v1/search');
+    uri.searchParams.set('text',searchText);
+    uri.searchParams.set('size','10');
+    uri.searchParams.set('boundary.country','BRA');
+    uri.searchParams.set('focus.point.lat',String(SHOP_COORDS[1]));
+    uri.searchParams.set('focus.point.lon',String(SHOP_COORDS[0]));
+    const data=await getJSON(uri.toString(),{headers:{Authorization:apiKey}},9500);
+    const points=(data.features||[]).map(f=>geocodeInfo(f,street,'')).filter(Boolean);
+    matches.push(...points.filter(m=>haversine(SHOP_COORDS,m.point)<25));
+    if(matches.some(m=>m.layer==='street'))break;
   }
-  const nearby=matches.filter(x=>haversine(SHOP_COORDS,x.point)<25);
-  nearby.sort((a,b)=>(b.quality==='number')-(a.quality==='number') || (b.confidence||0)-(a.confidence||0));
-  return nearby[0]||null;
+  matches.sort((a,b)=>(b.layer==='street'?1:0)-(a.layer==='street'?1:0)
+    || (b.confidence||0)-(a.confidence||0)
+    || haversine(SHOP_COORDS,a.point)-haversine(SHOP_COORDS,b.point));
+  return matches[0]||null;
 }
 function haversine(a,b) {
   const toRad=x=>x*Math.PI/180;
@@ -117,42 +120,27 @@ async function frete(request,env,url) {
   let input;
   try {input=await request.json()}catch(_){return siteError('json','Dados inválidos.')}
   const cep=String(input?.cep||'').replace(/\D/g,'');
-  const number=String(input?.numero||'').trim();
-  if(!/^\d{8}$/.test(cep) || !/^[0-9]{1,6}[a-zA-Z]?$/.test(number))return siteError('invalid_address','Informe um CEP válido e o número da residência.');
-  const pin=input?.pin;
-  if(pin!=null&&!validCoord(pin))return siteError('invalid_pin','Ponto do mapa inválido.');
+  if(!/^\d{8}$/.test(cep))return siteError('invalid_cep','Informe um CEP válido com oito dígitos.');
   try {
     let stage='cep';
     const address=await cepLookup(cep);
-    if(!address)return siteError('cep_not_found','CEP não localizado. Confira os números.',422);
-    if(address.state!=='SP')return siteError('outside_state','Endereço fora da área de entrega.',422);
+    if(!address)return siteError('cep_not_found','CEP não localizado. Confira os oito dígitos.',422);
+    if(address.state!=='SP')return siteError('outside_state','CEP fora da região de entrega.',422);
     const originPoint=SHOP_COORDS;
-    if(!validCoord(originPoint))return siteError('origin_setup','Confirme o ponto exato de saída da pizzaria para ativar frete automático.',503);
+    if(!validCoord(originPoint))return siteError('origin_setup','Ponto de saída não configurado.',503);
     stage='destination';
-    let destination,precision='pin_confirmado';
-    if(pin){
-      if(haversine(originPoint,pin)>MAX_KM+4)return siteError('outside_area','Ponto fora da região de entrega.',422,{address});
-      destination=pin;
-    }else{
-      const candidate=await geocodeAddress(env.ORS_API_KEY,address.street,number,address.neighborhood,address.city,address.state);
-      if(!candidate || candidate.quality!=='number'){
-        return siteError('confirm_pin','Número não localizado com precisão. Confirme o ponto de entrega no mapa.',409,{
-          address,near:candidate?{lon:candidate.point[0],lat:candidate.point[1]}:{lon:SHOP_COORDS[0],lat:SHOP_COORDS[1]},
-          label:candidate?.label||address.street
-        });
-      }
-      destination=candidate.point;
-      precision='numero_localizado';
-    }
+    const candidate=await geocodeByCep(env.ORS_API_KEY,address);
+    if(!candidate)return siteError('cep_unmapped','A rua desse CEP não foi encontrada no mapa de rotas. Frete a confirmar pela pizzaria.',422,{address});
+    const destination=candidate.point;
     if(haversine(originPoint,destination)>MAX_KM+2){
       return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address});
     }
     stage='route';
     const meters=await route(env.ORS_API_KEY,originPoint,destination);
     const km=meters/1000;
-    if(km>MAX_KM+1e-6)return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address,distanceKm:Math.round(km*100)/100});
+    if(km>MAX_KM+1e-6)return siteError('outside_area','Distância de referência do CEP acima de 10 km. Consulte a pizzaria se estiver perto do limite.',422,{address,distanceKm:Math.round(km*100)/100});
     const fee=5+Math.max(0,Math.ceil(km-5-1e-9));
-    return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision,origin:'Rua Firmino Morgado, 60',destination:{lon:destination[0],lat:destination[1]},routeMode:'driving-car'});
+    return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision:'referencia_do_cep',estimated:true,origin:'Rua Firmino Morgado, 60',destination:{lon:destination[0],lat:destination[1]},routeMode:'driving-car'});
   } catch(e) {
     if(e.status===403 || e.status===401)return siteError('provider_access','O serviço de rotas recusou a chave. Confira o plano e a ativação da API.',503);
     return siteError('provider_unavailable_'+stage,'Não foi possível consultar o serviço de '+stage+' agora.',503,{upstreamStatus:typeof e.status==='number'?e.status:null});

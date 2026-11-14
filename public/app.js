@@ -54,12 +54,12 @@
   const baseFee=Number(cfg.delivery?.minFee)||5;
   const extraFee=Number(cfg.delivery?.extraKmFee)||1;
   const displayKm=n=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2}).format(n);
-  const shipping={status:'idle',address:null,quote:null,pin:null,near:null,message:'',requestId:0};
+  const shipping={status:'idle',address:null,quote:null,message:'',requestId:0};
   let lookupTimer=null, quoteTimer=null;
   const validNumber=()=>/^[0-9]{1,6}[a-zA-Z]?$/.test(form.numero.trim());
   const cepDigits=()=>form.cep.replace(/\D/g,'');
   const invalidateQuote=()=>{
-    shipping.quote=null;shipping.pin=null;shipping.near=null;shipping.message='';
+    shipping.quote=null;shipping.message='';
     shipping.requestId++;
   };
   const halfEnabled = cfg.options?.halfHalfEnabled !== false && products.length >= 2;
@@ -109,15 +109,14 @@
     return {count,pending,customized,subtotal,fee,total,km,outOfArea:shipping.status==='outside'};
   }
   function shippingPreview(){
-    if(shipping.status==='ready')return 'Rota calculada: '+displayKm(shipping.quote.distanceKm)+' km · Frete '+money(shipping.quote.fee)+' (até '+maxKm+' km).';
+    if(shipping.status==='ready')return 'Frete estimado pelo CEP: '+money(shipping.quote.fee)+' · rota de referência: '+displayKm(shipping.quote.distanceKm)+' km.';
     if(shipping.status==='loading-cep')return 'Buscando endereço do CEP...';
     if(shipping.status==='calculating')return 'Calculando rota pelas ruas...';
-    if(shipping.status==='map-required')return shipping.message||'Confirme a entrada da casa no mapa para calcular com precisão.';
+    // O cálculo usa a rua de referência do CEP, sem confirmação em mapa.
     if(shipping.status==='outside')return 'Fora da área de entrega de até '+maxKm+' km.';
     if(shipping.status==='error')return shipping.message||'Não foi possível calcular o frete. Tente novamente.';
     if(!shipping.address)return 'Digite seu CEP para preencher a rua automaticamente.';
-    if(!validNumber())return 'Agora informe o número da residência.';
-    return 'Calcule o frete automaticamente com CEP e número.';
+    return 'Calcularemos automaticamente o frete para esse CEP.';
   }
   function updateDeliveryLive(){
     const t=totals(),text=shippingPreview();
@@ -130,15 +129,14 @@
     });
     document.querySelectorAll('[data-delivery-pending]').forEach(el=>{
       el.textContent=shipping.status==='ready'
-        ? 'Frete calculado pela rota. Os preços das pizzas e as alterações continuam sujeitos à confirmação.'
-        : 'O frete será calculado pela rota das ruas antes do envio do pedido.';
+        ? 'Frete estimado pela rua do CEP. O valor pode ser ajustado após conferir o endereço completo. Preços das pizzas a confirmar.'
+        : 'Digite o CEP para consultar o frete automaticamente. O número é usado só para identificar a entrega.';
     });
     document.querySelectorAll('[data-delivery-fee]').forEach(el=>{el.textContent=shipping.status==='outside'?'Fora da área':validPrice(t.fee)?money(t.fee):'A calcular';});
-    document.querySelectorAll('[data-delivery-label]').forEach(el=>{el.textContent=validPrice(t.fee)?'Frete calculado':'Taxa de entrega';});
+    document.querySelectorAll('[data-delivery-label]').forEach(el=>{el.textContent=validPrice(t.fee)?'Frete pelo CEP (estimado)':'Taxa de entrega';});
     document.querySelectorAll('[data-order-total]').forEach(el=>{el.textContent=t.total===null?'A confirmar':money(t.total);});
-    document.querySelectorAll('[data-map-confirm]').forEach(el=>{el.hidden=shipping.status!=='map-required';});
     document.querySelectorAll('[data-calc-frete]').forEach(el=>{
-      el.disabled=!shipping.address||!validNumber()||shipping.status==='calculating';
+      el.disabled=!shipping.address||shipping.status==='calculating';
       el.textContent=shipping.status==='calculating'?'Calculando...':shipping.status==='ready'?'Recalcular frete':'Calcular frete';
     });
     if($('mobile-total'))$('mobile-total').textContent=t.total!==null?money(t.total):'Conferir pedido →';
@@ -154,51 +152,42 @@
       if(!response.ok||!data.ok)throw new Error(data.message||'CEP não encontrado.');
       shipping.address=data.address;
       form.address=[data.address.street,data.address.neighborhood,data.address.city+' - '+data.address.state].filter(Boolean).join(', ');
-      shipping.status='waiting-number';updateDeliveryLive();
-      if(validNumber())scheduleQuote(350);
+      shipping.status='waiting-quote';updateDeliveryLive();
+      calculateShipping();
     }catch(error){
       if(requestId!==shipping.requestId)return;
       shipping.address=null;form.address='';
       shipping.status='error';shipping.message=error.message||'Não foi possível consultar CEP.';updateDeliveryLive();
     }
   }
-  async function calculateShipping(pin=null){
+  async function calculateShipping(){
     clearTimeout(quoteTimer);
-    const cep=cepDigits();const numero=form.numero.trim();
-    if(cep.length!==8||!validNumber()||!shipping.address){
-      toast('Preencha um CEP válido e o número da residência.');return;
+    const cep=cepDigits();
+    if(cep.length!==8||!shipping.address){
+      toast('Informe um CEP válido para calcular o frete.');return;
     }
-    const requestId=++shipping.requestId;shipping.status='calculating';shipping.quote=null;shipping.message='';
+    const requestId=++shipping.requestId;
+    shipping.status='calculating';shipping.quote=null;shipping.message='';
     updateDeliveryLive();
     try{
-      const response=await fetch('/api/frete',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cep,numero,...(pin?{pin}:{})})});
+      const response=await fetch('/api/frete',{
+        method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({cep})
+      });
       const data=await response.json();
       if(requestId!==shipping.requestId)return;
-      if(response.status===409&&data.code==='confirm_pin'){
-        shipping.near=data.near||null;shipping.message=data.message;shipping.status='map-required';updateDeliveryLive();return;
-      }
       if(!response.ok||!data.ok){
-        shipping.message=data.message||'Não foi possível calcular a rota.';
+        shipping.message=data.message||'Não foi possível calcular o frete para esse CEP.';
         shipping.status=data.code==='outside_area'||data.code==='outside_state'?'outside':'error';
         updateDeliveryLive();return;
       }
       if(!Number.isFinite(data.fee)||!Number.isFinite(data.distanceKm))throw new Error('Resposta de distância inválida.');
-      shipping.status='ready';shipping.quote=data;shipping.pin=pin;updateDeliveryLive();
+      shipping.status='ready';shipping.quote=data;updateDeliveryLive();
     }catch(error){
       if(requestId!==shipping.requestId)return;
-      shipping.status='error';shipping.message=error.message||'Falha de conexão ao calcular o frete.';updateDeliveryLive();
+      shipping.status='error';shipping.message=error.message||'Falha de conexão ao calcular o frete.';
+      updateDeliveryLive();
     }
-  }
-  function scheduleQuote(delay=750){
-    clearTimeout(quoteTimer);
-    if(!shipping.address||!validNumber())return;
-    quoteTimer=setTimeout(()=>calculateShipping(),delay);
-  }
-  function openAddressMap(){
-    if(!shipping.address||!validNumber())return toast('Informe o CEP e número antes de marcar no mapa.');
-    if(!window.DOPPIO_MAP)return toast('Mapa indisponível. Atualize a página e tente novamente.');
-    const center=shipping.near||{lat:-23.5532045,lon:-46.4938778};
-    window.DOPPIO_MAP.show({lat:center.lat,lon:center.lon,onConfirm:coords=>calculateShipping(coords)});
   }
   function renderCartContents() {
     const s = totals();
@@ -206,28 +195,27 @@
       : '<div class="cart-empty"><span class="cart-empty-icon">🍕</span><b>Seu pedido começa aqui.</b><p>Escolha uma pizza e monte seu pedido.</p></div>';
     const summary=cart.length?`<div class="cart-line"></div>
       <div class="summary-row"><span>${s.pending?'Parcial dos sabores com preço':s.customized?'Subtotal base estimado':'Subtotal'}</span><strong>${s.pending&&!s.subtotal?'A confirmar':money(s.subtotal)}</strong></div>
-      <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete calculado':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':validPrice(s.fee)?money(s.fee):'A calcular'}</strong></div>
+      <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete pelo CEP (estimado)':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':validPrice(s.fee)?money(s.fee):'A calcular'}</strong></div>
       <div class="summary-row summary-total"><span>Total estimado</span><strong data-order-total>${s.total===null?'A confirmar':money(s.total)}</strong></div>
       <div class="cart-pending" data-delivery-pending>${shipping.status==='ready'?'Frete calculado pela rota. Preços das pizzas e alterações ainda precisam de confirmação.':'O frete será calculado pela rota das ruas antes do envio do pedido.'}</div>`:'';
     const fields=cart.length?`<form class="order-form" onsubmit="return false">
       <label for="{prefix}-name">Seu nome <span class="required-mark">*</span></label>
       <input id="{prefix}-name" data-field="name" autocomplete="name" maxlength="70" placeholder="Como podemos chamar você?" value="${esc(form.name)}" required>
       <div class="delivery-calculator">
-        <strong class="delivery-title">Frete automático por endereço</strong>
+        <strong class="delivery-title">Frete automático pelo CEP</strong>
         <label for="{prefix}-cep">CEP de entrega <span class="required-mark">*</span></label>
         <input id="{prefix}-cep" data-field="cep" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" value="${esc(form.cep)}" required>
-        <p class="delivery-address-result" data-delivery-address>${esc(form.address||'O endereço será preenchido após a consulta do CEP.')}</p>
+        <p class="delivery-address-result" data-delivery-address>${esc(form.address||'O endereço será preenchido após consultar o CEP.')}</p>
+        <p class="delivery-estimate ${shipping.status==='outside'||shipping.status==='error'?'delivery-warning':''}" data-delivery-preview aria-live="polite">${esc(shippingPreview())}</p>
+        <button type="button" data-calc-frete class="delivery-calc-button">Recalcular frete</button>
+        <p class="delivery-rule">Até ${baseKm} km: ${money(baseFee)} · Depois: +${money(extraFee)} por km iniciado · Máximo: ${maxKm} km.</p>
+        <p class="delivery-hint">A distância é estimada pela rua de referência do CEP e pode variar conforme o número da casa. Não é necessário marcar no mapa.</p>
         <div class="delivery-field-grid">
-          <div><label for="{prefix}-numero">Número <span class="required-mark">*</span></label>
+          <div><label for="{prefix}-numero">Número (para entrega) <span class="required-mark">*</span></label>
             <input id="{prefix}-numero" data-field="numero" inputmode="numeric" maxlength="7" placeholder="Nº da casa" value="${esc(form.numero)}" required></div>
           <div><label for="{prefix}-complemento">Complemento</label>
             <input id="{prefix}-complemento" data-field="complemento" maxlength="65" placeholder="Apto / Bloco" value="${esc(form.complemento)}"></div>
         </div>
-        <button type="button" data-calc-frete class="delivery-calc-button">Calcular frete</button>
-        <button type="button" data-map-confirm class="delivery-map-button" ${shipping.status==='map-required'?'':'hidden'}>📍 Confirmar entrada no mapa</button>
-        <p class="delivery-rule">Até ${baseKm} km: ${money(baseFee)} · Depois: +${money(extraFee)} por km iniciado · Máximo de ${maxKm} km.</p>
-        <p class="delivery-estimate ${shipping.status==='outside'||shipping.status==='error'?'delivery-warning':''}" data-delivery-preview aria-live="polite">${esc(shippingPreview())}</p>
-        <p class="delivery-hint">Distância calculada pelas ruas. Quando o número não é encontrado, confirme a entrada no mapa.</p>
       </div>
       <label for="{prefix}-payment">Forma de pagamento</label>
       <select id="{prefix}-payment" data-field="payment">${(cfg.business.paymentMethods||['A combinar']).map(x=>`<option value="${esc(x)}" ${x===form.payment?'selected':''}>${esc(x)}</option>`).join('')}</select>
@@ -308,9 +296,13 @@
     if(!validNumber()){toast('Informe o número da residência.');focusMissing('numero');return;}
     if(!form.address||!shipping.address){toast('Aguarde a consulta do CEP.');focusMissing('cep');return;}
     const s=totals();
-    if(shipping.status!=='ready'||!shipping.quote){
-      toast(shipping.status==='map-required'?'Confirme a entrada no mapa para calcular o frete.':'Calcule o frete antes de enviar o pedido.');
-      focusMissing('numero');return;
+    if(shipping.status==='outside'){
+      toast('Esse CEP está fora da área estimada de entrega. Consulte a pizzaria.');
+      focusMissing('cep');return;
+    }
+    if(shipping.status!=='ready' && shipping.status!=='error'){
+      toast('Aguarde o cálculo automático do frete pelo CEP.');
+      focusMissing('cep');return;
     }
     const when = new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date());
     const lines = [
@@ -318,12 +310,11 @@
       `Enviado em: ${when}`,'',
       ...cart.flatMap(i => [`${i.qty}x ${formatName(i)} — ${validPrice(itemPrice(i)) ? money(itemPrice(i)*i.qty) + (i.note?' (preço base; alterações a confirmar)':'') : 'preço a confirmar'}`, ...(i.note?[`   ✎ Observação desta pizza: ${i.note}`]:[])]),
       '', `Subtotal base: ${s.pending?'a confirmar':money(s.subtotal)}`,
-      `Distância pela rota: ${displayKm(s.km)} km (OpenRouteService)`,
-      `Frete calculado: ${money(s.fee)}`,
+      `Distância de referência do CEP: ${validPrice(s.km)?displayKm(s.km)+' km':'a confirmar'}`,
+      `Frete estimado pelo CEP: ${validPrice(s.fee)?money(s.fee):'a confirmar pela pizzaria'}`,
       `Total: ${s.total===null?'a confirmar':money(s.total)}`,'',
       `*Cliente:* ${form.name.trim()}`,
       `*Endereço:* ${form.address}, nº ${form.numero.trim()}${form.complemento.trim()?', '+form.complemento.trim():''} · CEP ${form.cep.trim()}`,
-      ...(shipping.quote.destination?[`*Mapa de entrega:* https://www.openstreetmap.org/?mlat=${shipping.quote.destination.lat}&mlon=${shipping.quote.destination.lon}#map=18/${shipping.quote.destination.lat}/${shipping.quote.destination.lon}`]:[]),
       `*Pagamento:* ${form.payment}`,
       `*Observações gerais:* ${form.notes.trim()||'Nenhuma'}`,'',
       '_🍕 A Doppio Pizzas confirmará os valores, o frete, a disponibilidade e as alterações de ingredientes antes de finalizar o pedido._'
@@ -368,7 +359,6 @@
     if (qty) {quantity(qty.dataset.qty,Number(qty.dataset.step));return;}
     if (event.target.closest('[data-clear]')) {cart=[];renderCart();toast('Pedido esvaziado.');return;}
     if (event.target.closest('[data-calc-frete]')) {calculateShipping();return;}
-    if (event.target.closest('[data-map-confirm]')) {openAddressMap();return;}
     if (event.target.closest('[data-checkout]')) {checkout();return;}
     const filterButton=event.target.closest('[data-filter]');
     if (filterButton) {filter=filterButton.dataset.filter;renderProducts();}
@@ -385,11 +375,10 @@
       shipping.status='idle';updateDeliveryLive();
       if(cepDigits().length===8)lookupTimer=setTimeout(lookupCep,350);
     }else if(key==='numero'){
-      clearTimeout(quoteTimer);
-      if(shipping.status==='loading-cep'){shipping.quote=null;updateDeliveryLive();return;}
-      invalidateQuote();
-      shipping.status=shipping.address?'waiting-number':'idle';updateDeliveryLive();
-      if(shipping.address&&validNumber())scheduleQuote();
+      // O número da casa não interfere no cálculo baseado no CEP.
+      document.querySelectorAll('[data-field="numero"]').forEach(el=>{
+        if(el!==event.target)el.value=form.numero;
+      });
     }
   };
   document.addEventListener('input',updateField);
