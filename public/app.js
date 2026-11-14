@@ -140,7 +140,7 @@
     });
     document.querySelectorAll('[data-delivery-pending]').forEach(el=>{
       el.textContent=shipping.status==='ready'
-        ? 'Frete estimado pela rua do CEP. O valor pode ser ajustado após conferir o endereço completo. Preços das pizzas a confirmar.'
+        ? 'Frete estimado pela rua do CEP. Confira o endereço: o valor pode variar. Alterações de ingredientes são confirmadas no WhatsApp.'
         : 'Digite o CEP para consultar o frete automaticamente. O número é usado só para identificar a entrega.';
     });
     document.querySelectorAll('[data-delivery-fee]').forEach(el=>{el.textContent=shipping.status==='outside'?'Fora da área':validPrice(t.fee)?money(t.fee):'A calcular';});
@@ -473,7 +473,18 @@
   $('save-customize').addEventListener('click',saveCustomization);
   $('customize-notes').addEventListener('input',()=>{$('customize-length').textContent=`${$('customize-notes').value.length}/180`;});
   $('overlay').addEventListener('click',closeDialogs);
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDialogs();});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){closeDialogs();return;}
+    if(e.key!=='Tab'||$('checkout-review').hidden)return;
+    const controls=[...$('checkout-review').querySelectorAll('button:not([disabled])')].filter(el=>el.getClientRects().length>0);
+    if(!controls.length)return;
+    const first=controls[0],last=controls[controls.length-1];
+    if(e.shiftKey&&(document.activeElement===first||!$('checkout-review').contains(document.activeElement))){
+      e.preventDefault();last.focus();
+    }else if(!e.shiftKey&&(document.activeElement===last||!$('checkout-review').contains(document.activeElement))){
+      e.preventDefault();first.focus();
+    }
+  });
   $('half-one').addEventListener('change',halfPrice);
   $('half-two').addEventListener('change',halfPrice);
   $('add-half').addEventListener('click',()=>{
@@ -499,6 +510,7 @@
   $('draft-note').hidden=!cfg.business.draft;
   if (cfg.options?.halfHalfEnabled===false || products.length<2) $('meio-a-meio').hidden=true;
   const allPricesReady=products.every(p=>validPrice(p.price));
-  $('menu-note').textContent=allPricesReady?'Preços informados · frete calculado pela rota':'Preços das pizzas a confirmar · frete automático pelo endereço';
+  $('menu-note').textContent=allPricesReady?'Preços definidos · frete estimado pelo CEP':'Preços das pizzas a confirmar · frete automático pelo CEP';
+  if(allPricesReady&&cfg.business.draft)$('draft-note').textContent='Cardápio em preparação · Frete estimado pelo CEP e pedidos sujeitos à confirmação pelo WhatsApp.';
   renderProducts(); renderCart();
 })();
