@@ -50,3 +50,16 @@ Sem database_id verdadeiro no wrangler.jsonc e sem os dois secrets, o painel fic
 Verificar os quatro preços (54,99/49,99), meio a meio, frete por CEP, carrinho e envio do checkout. Abrir /admin em aba anônima deve exigir senha; sem login /api/admin/state retorna 401. Após editar/salvar, a alteração deve aparecer no cardápio público.
 
 Nunca registre ADMIN_PASSWORD, ADMIN_SESSION_SECRET nem ORS_API_KEY em arquivos versionados.
+
+## Horários automáticos — Fase 1.1
+
+O Doppio Admin pode ativar uma programação semanal em Funcionamento da pizzaria. Por padrão, fica DESLIGADA para preservar o funcionamento manual e os horários atuais. O operador seleciona os dias e preenche abertura/fechamento, depois salva. A opção manual "Aceitar pedidos" funciona como interruptor principal: se desligada, bloqueia novos pedidos independentemente da programação.
+
+- O horário é interpretado no fuso America/Sao_Paulo, não no fuso do aparelho do cliente.
+- Os horários aceitam funcionamento após a meia-noite, por exemplo sábado 18:00 até domingo 01:00.
+- O início da abertura é inclusivo e o fechamento é exclusivo; horários iguais são inválidos.
+- Fora da programação, aparece aviso de fechamento e próxima abertura prevista; o cardápio continua visível, mas adicionar pizzas e checkout ficam bloqueados.
+- O site consulta a situação atual do Worker na carga inicial e verifica novamente a cada minuto e ao voltar para a aba.
+- A API GET /api/store-status publica somente o estado de funcionamento, sem credenciais ou dados de clientes.
+- Não há pedidos agendados nessa etapa; fechar no site não impede contato direto pelo WhatsApp.
+- Os campos manuais de dias e horários continuam disponíveis para quando o agendamento for desligado.

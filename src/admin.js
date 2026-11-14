@@ -10,6 +10,8 @@ const enc=new TextEncoder();
 const DEFAULT_STATE={
   revision:0,
   acceptingOrders:true,
+  scheduleEnabled:false,
+  weeklyHours:Array.from({length:7},()=>({enabled:false,start:'',end:''})),
   openDays:'Sábados e domingos',
   openHours:'',
   etaMinutes:40,
@@ -92,11 +94,71 @@ async function readBody(req,max=45000){
   return JSON.parse(text);
 }
 function validText(v,max,min=0){return typeof v==='string'&&v.trim().length>=min&&v.length<=max&&!/[\u0000-\u001f\u007f]/.test(v);}
+
+const WEEKDAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const WEEKKEYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const isClock=v=>typeof v==='string'&&/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v);
+const clockMin=v=>Number(v.slice(0,2))*60+Number(v.slice(3,5));
+const friendlyClock=v=>v.endsWith(':00')?Number(v.slice(0,2))+'h':Number(v.slice(0,2))+'h'+v.slice(3);
+function scheduleFrom(raw){
+  const scheduleEnabled=raw.scheduleEnabled===true;
+  const input=Array.isArray(raw.weeklyHours)&&raw.weeklyHours.length===7?raw.weeklyHours:null;
+  const weeklyHours=(input||Array.from({length:7},()=>({enabled:false,start:'',end:''}))).map((row,i)=>{
+    if(!row||typeof row!=='object'||typeof row.enabled!=='boolean')throw Error('Confira os dias de abertura.');
+    const start=row.start||'',end=row.end||'';
+    if(typeof start!=='string'||typeof end!=='string'||start.length>5||end.length>5)throw Error('Horário inválido em '+WEEKDAYS[i]+'.');
+    if(row.enabled&&(!isClock(start)||!isClock(end)||start===end))throw Error('Defina abertura e fechamento diferentes em '+WEEKDAYS[i]+'.');
+    if(!row.enabled&&((start&&!isClock(start))||(end&&!isClock(end))))throw Error('Horário inválido em '+WEEKDAYS[i]+'.');
+    return {enabled:row.enabled,start,end};
+  });
+  if(scheduleEnabled&&!weeklyHours.some(day=>day.enabled))throw Error('Escolha ao menos um dia e seus horários antes de ativar o automático.');
+  return {scheduleEnabled,weeklyHours};
+}
+function resolveStoreStatus(state,at=new Date()){
+  if(state.acceptingOrders===false)return {acceptingOrders:false,status:'paused',nextOpening:null,scheduleEnabled:state.scheduleEnabled===true};
+  if(state.scheduleEnabled!==true)return {acceptingOrders:true,status:'manual',nextOpening:null,scheduleEnabled:false};
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(at);
+  const get=type=>parts.find(p=>p.type===type)?.value;
+  const dayIndex=WEEKKEYS.indexOf(get('weekday'));
+  if(dayIndex<0)throw Error('Dia local desconhecido');
+  const current=Number(get('hour'))*60+Number(get('minute'));
+  const hours=state.weeklyHours;
+  const today=hours[dayIndex],yesterday=hours[(dayIndex+6)%7];
+  const todayOpen=today.enabled&&(clockMin(today.start)<clockMin(today.end)
+    ? current>=clockMin(today.start)&&current<clockMin(today.end)
+    : current>=clockMin(today.start));
+  const previousOvernight=yesterday.enabled&&clockMin(yesterday.end)<clockMin(yesterday.start)
+    &&current<clockMin(yesterday.end);
+  if(todayOpen||previousOvernight)return {acceptingOrders:true,status:'open',nextOpening:null,scheduleEnabled:true};
+  let nextOpening=null;
+  for(let offset=0;offset<=7;offset++){
+    const index=(dayIndex+offset)%7,record=hours[index];
+    if(record.enabled&&(offset>0||clockMin(record.start)>current)){
+      nextOpening=WEEKDAYS[index]+' às '+friendlyClock(record.start);
+      break;
+    }
+  }
+  return {acceptingOrders:false,status:'closed',nextOpening,scheduleEnabled:true};
+}
+export async function publicStoreStatus(env){
+  if(!env.DOPPIO_DB)return j({ok:true,...resolveStoreStatus(DEFAULT_STATE)});
+  try{
+    await ensureDb(env);
+    const row=await env.DOPPIO_DB.prepare('SELECT data FROM admin_state WHERE id=1').first();
+    const data=row?JSON.parse(row.data):DEFAULT_STATE;
+    const state=validateState(data,Number.isInteger(row?.revision)?row.revision:0);
+    return j({ok:true,...resolveStoreStatus(state)});
+  }catch(_){
+    return error('store_status_unavailable','Não foi possível verificar o funcionamento da pizzaria agora.',503);
+  }
+}
+
 function validateState(raw,revision){
   if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Estrutura inválida.');
   if(typeof raw.acceptingOrders!=='boolean')throw Error('Status da pizzaria inválido.');
   if(!validText(raw.openDays,90,2)||!validText(raw.openHours,60))throw Error('Dias ou horário inválidos.');
   if(!Number.isInteger(raw.etaMinutes)||raw.etaMinutes<10||raw.etaMinutes>240)throw Error('Prazo estimado deve ser entre 10 e 240 minutos.');
+  const schedule=scheduleFrom(raw);
   if(!Array.isArray(raw.products)||raw.products.length<1||raw.products.length>30)throw Error('Cadastre entre 1 e 30 sabores.');
   const ids=new Set();
   const products=raw.products.map(p=>{
@@ -110,7 +172,7 @@ function validateState(raw,revision){
     if(!Array.isArray(p.ingredients)||p.ingredients.length>16||!p.ingredients.every(v=>validText(v,50,1)))throw Error('Ingredientes inválidos.');
     return {id:p.id,name:p.name.trim(),description:p.description.trim(),ingredients:p.ingredients.map(x=>x.trim()),category:p.category.trim(),image:p.image,price:Math.round(p.price*100)/100,available:p.available,tag:p.tag.trim()};
   });
-  return {revision,acceptingOrders:raw.acceptingOrders,openDays:raw.openDays.trim(),openHours:raw.openHours.trim(),etaMinutes:raw.etaMinutes,products};
+  return {revision,acceptingOrders:raw.acceptingOrders,...schedule,openDays:raw.openDays.trim(),openHours:raw.openHours.trim(),etaMinutes:raw.etaMinutes,products};
 }
 async function stateRow(env){
   await ensureDb(env);
@@ -189,7 +251,17 @@ export async function publicCatalogScript(env){
     if(!row)return new Response('/* Nenhuma alteração administrativa publicada. */',{headers});
     const data=JSON.parse(row.data);
     const overlay=validateState(data,Number.isInteger(data.revision)?data.revision:0);
-    const business={openDays:overlay.openDays,openHours:overlay.openHours||null,etaMinutes:overlay.etaMinutes,acceptingOrders:overlay.acceptingOrders};
+    const current=resolveStoreStatus(overlay);
+    const scheduled=overlay.scheduleEnabled?overlay.weeklyHours.map((day,i)=>day.enabled?WEEKDAYS[i].slice(0,3)+' '+friendlyClock(day.start)+'–'+friendlyClock(day.end):null).filter(Boolean):[];
+    const business={
+      openDays:scheduled.length?'Horários programados':overlay.openDays,
+      openHours:scheduled.length?scheduled.join(' · '):(overlay.openHours||null),
+      etaMinutes:overlay.etaMinutes,
+      acceptingOrders:current.acceptingOrders,
+      storeStatus:current.status,
+      nextOpening:current.nextOpening,
+      scheduleEnabled:current.scheduleEnabled
+    };
     const escaped=JSON.stringify({business,products:overlay.products}).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
     return new Response('(()=>{const s='+escaped+';if(window.DOPPIO_CONFIG){Object.assign(window.DOPPIO_CONFIG.business,s.business);window.DOPPIO_CONFIG.products=s.products;}})();',{headers});
   }catch(_){

@@ -10,7 +10,9 @@
   const validPrice = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
   const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const products = cfg.products.filter(p => p && typeof p.id === 'string' && p.available !== false);
-  const acceptingOrders = cfg.business?.acceptingOrders !== false;
+  let acceptingOrders = cfg.business?.acceptingOrders !== false;
+  let storeStatus = cfg.business?.storeStatus || (acceptingOrders?'manual':'paused');
+  let nextOpening = cfg.business?.nextOpening || null;
   const byId = id => products.find(p => p.id === id);
   const formatPrice = n => validPrice(n) ? money(n) : 'A confirmar';
   // Preço de destaque: reais maiores e centavos em posição elevada, sem descontos fictícios.
@@ -100,13 +102,13 @@
         <span class="pizza-tag">MEIO A MEIO</span><span class="half-image-mark" aria-hidden="true">½</span>
       </div>
       <div class="pizza-body"><span class="pizza-category">PERSONALIZE SUA PIZZA</span><h3>Pizza meio a meio</h3><p>Escolha duas metades entre nossos sabores. Você também pode pedir alterações nos ingredientes.</p>
-      <div class="pizza-bottom"><span class="price price-pending">Valor conforme os sabores</span><button class="add-button half-card-button" data-open-half type="button">½ Escolher sabores</button></div>
+      <div class="pizza-bottom"><span class="price price-pending">Valor conforme os sabores</span><button class="add-button half-card-button" data-open-half type="button" ${acceptingOrders?'':'disabled title="Pedidos pausados"'}>½ Escolher sabores</button></div>
       <p class="half-card-caption">Preço pela média dos sabores, sujeito à confirmação.</p></div></article>` : '';
     $('products').innerHTML = displayed.map(p => `<article class="pizza-card">
       <div class="pizza-image"><img src="${esc(p.image)}" alt="Pizza de ${esc(p.name)}" loading="lazy" decoding="async" width="560" height="390"><span class="pizza-tag">${esc(p.tag||p.category||'Sabor')}</span></div>
       <div class="pizza-body"><span class="pizza-category">${esc(p.category||'Outros')}</span><h3>${esc(p.name)}</h3>
       <p class="pizza-ingredients-line" aria-label="Ingredientes: ${esc(Array.isArray(p.ingredients)?p.ingredients.join(', '):p.description)}">${Array.isArray(p.ingredients)&&p.ingredients.length?p.ingredients.map(esc).join(' · '):esc(p.description)}</p>
-      <div class="pizza-bottom">${priceMarkup(p.price)}<button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="Adicionar ${esc(p.name)} ao carrinho" ${acceptingOrders?'':'disabled title="Pedidos temporariamente pausados"'}>${cartIcon} Adicionar</button></div><button type="button" class="customize-link" data-customize="${esc(p.id)}">✎ Personalizar / trocar ingrediente</button></div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
+      <div class="pizza-bottom">${priceMarkup(p.price)}<button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="Adicionar ${esc(p.name)} ao carrinho" ${acceptingOrders?'':'disabled title="Pedidos temporariamente pausados"'}>${cartIcon} Adicionar</button></div><button type="button" class="customize-link" data-customize="${esc(p.id)}" ${acceptingOrders?'':'disabled'}>✎ Personalizar / trocar ingrediente</button></div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
     document.querySelector('.menu-count span').textContent = String(products.length + (halfEnabled ? 1 : 0)).padStart(2,'0');
     renderFilters();
   }
@@ -253,7 +255,7 @@
   function add(item) {
     const normalized=normalizeItem({...item,qty:1});
     if (!normalized) return;
-    if(!acceptingOrders){toast('A pizzaria está com os pedidos pausados neste momento.');return;}
+    if(!acceptingOrders){toast('A pizzaria não está recebendo pedidos neste horário.');return;}
     const found = cart.find(c => c.key === normalized.key);
     if (found) found.qty = Math.min(99,found.qty+1);
     else cart.push(normalized);
@@ -366,7 +368,7 @@
     else closeDialogs();
   }
   function checkout(){
-    if(!acceptingOrders)return toast('A pizzaria está com os pedidos pausados neste momento.');
+    if(!acceptingOrders)return toast('A pizzaria está fechada ou com pedidos pausados.');
     if(!cart.length)return toast('Adicione uma pizza primeiro.');
     if(form.name.trim().length<2){toast('Informe seu nome.');focusMissing('name');return;}
     if(cepDigits().length!==8){toast('Informe um CEP válido.');focusMissing('cep');return;}
@@ -429,11 +431,11 @@
     $('half-price').textContent=a&&b&&validPrice(a.price)&&validPrice(b.price)?`Valor da pizza: ${money((a.price+b.price)/2)}`:'Valor da pizza: a confirmar';
   }
   document.addEventListener('click', event => {
-    if (event.target.closest('[data-open-half]')) {populateHalf();$('half-notes').value='';openDialog('half-modal');return;}
+    if (event.target.closest('[data-open-half]')) {if(!acceptingOrders)return toast('Pedidos indisponíveis neste horário.');populateHalf();$('half-notes').value='';openDialog('half-modal');return;}
     const addButton=event.target.closest('[data-add]');
     if (addButton) {const id=addButton.dataset.add;if(byId(id))add({type:'pizza',id});return;}
     const custom=event.target.closest('[data-customize]');
-    if (custom) {const id=custom.dataset.customize;if(byId(id))openCustomize({type:'pizza',id});return;}
+    if (custom) {if(!acceptingOrders)return toast('Pedidos indisponíveis neste horário.');const id=custom.dataset.customize;if(byId(id))openCustomize({type:'pizza',id});return;}
     const editNote=event.target.closest('[data-edit-note]');
     if (editNote) {const item=cart.find(i=>i.key===editNote.dataset.editNote);if(item)openCustomize(item,item.key);return;}
     const suggestion=event.target.closest('[data-suggestion]');
@@ -514,8 +516,46 @@
   $('draft-note').hidden=!cfg.business.draft;
   if (cfg.options?.halfHalfEnabled===false || products.length<2) $('meio-a-meio').hidden=true;
   const allPricesReady=products.every(p=>validPrice(p.price));
-  $('menu-note').textContent=!acceptingOrders?'Pedidos temporariamente pausados':allPricesReady?'Preços definidos · frete estimado pelo CEP':'Preços das pizzas a confirmar · frete automático pelo CEP';
-  if(!acceptingOrders){const notice=document.createElement('p');notice.className='store-paused-banner';notice.setAttribute('role','status');notice.textContent='🍕 Estamos com os pedidos temporariamente pausados. Você pode consultar os sabores e voltar mais tarde para fazer seu pedido.';document.querySelector('.menu-toolbar').after(notice);}
+  function updateStoreBanner(){
+    $('menu-note').textContent=!acceptingOrders
+      ? (storeStatus==='closed'?'Fechado neste horário':'Pedidos temporariamente pausados')
+      :storeStatus==='open'?'Aberto agora · pedidos disponíveis'
+      :allPricesReady?'Preços definidos · frete estimado pelo CEP':'Preços das pizzas a confirmar · frete automático pelo CEP';
+    let notice=document.querySelector('.store-paused-banner');
+    if(acceptingOrders){notice?.remove();return;}
+    if(!notice){
+      notice=document.createElement('p');
+      notice.className='store-paused-banner';
+      notice.setAttribute('role','status');
+      document.querySelector('.menu-toolbar').after(notice);
+    }
+    notice.textContent=storeStatus==='closed'
+      ? '🍕 Estamos fechados neste horário. '+(nextOpening?'Próxima abertura: '+nextOpening+'. ':'')+'O cardápio pode ser consultado normalmente.'
+      :'🍕 Os pedidos estão temporariamente pausados. Você pode consultar o cardápio e voltar mais tarde.';
+  }
+  async function refreshStoreStatus(){
+    try{
+      const response=await fetch('/api/store-status',{cache:'no-store'});
+      if(!response.ok)throw new Error('status unavailable');
+      const info=await response.json();
+      if(!info.ok||typeof info.acceptingOrders!=='boolean')throw new Error('invalid store status');
+      const changed=info.acceptingOrders!==acceptingOrders;
+      acceptingOrders=info.acceptingOrders;
+      storeStatus=info.status||'manual';
+      nextOpening=info.nextOpening||null;
+      if(changed){renderProducts();renderCart();}
+      updateStoreBanner();
+    }catch(_){
+      // Em falha da consulta com horário automático, bloquear novos pedidos por segurança.
+      if(cfg.business?.scheduleEnabled&&acceptingOrders){
+        acceptingOrders=false;storeStatus='paused';nextOpening=null;
+        renderProducts();renderCart();updateStoreBanner();
+      }
+    }
+  }
+  updateStoreBanner();
   if(allPricesReady&&cfg.business.draft)$('draft-note').textContent='Cardápio em preparação · Frete estimado pelo CEP e pedidos sujeitos à confirmação pelo WhatsApp.';
   renderProducts(); renderCart();
+  window.setInterval(()=>{if(!document.hidden)refreshStoreStatus();},60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshStoreStatus();});
 })();

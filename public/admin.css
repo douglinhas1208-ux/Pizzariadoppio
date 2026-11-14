@@ -10,3 +10,26 @@
 .setup-diagnostic-box .setup-ok{color:#246b38}
 .setup-diagnostic-box .setup-missing{color:#a04b1d}
 .setup-diagnostic-box small{font-size:.69rem;color:#627064}
+
+/* Programação automática dos horários (Fase 1.1) */
+.schedule-mode-toggle{margin-top:10px}
+.schedule-editor{border:1px solid #ecdccc;border-radius:14px;background:#fffaf5;padding:17px;margin-bottom:18px}
+.schedule-editor[hidden],.settings-grid label[hidden]{display:none!important}
+.schedule-editor-heading{display:grid;gap:4px;margin-bottom:14px}
+.schedule-editor-heading strong{font-size:.94rem;color:#473125}
+.schedule-editor-heading small{font-size:.75rem;color:#8b6f5d}
+.weekly-hours-grid{display:grid;gap:7px}
+.weekly-hours-row{display:grid;grid-template-columns:minmax(132px,1.3fr) minmax(110px,1fr) minmax(110px,1fr);align-items:center;gap:12px;background:#fff;border:1px solid #eee1d5;border-radius:10px;padding:9px 11px}
+.week-checkbox{display:flex;align-items:center;gap:9px;font-size:.8rem;font-weight:850;color:#3c312b;cursor:pointer}
+.week-checkbox input{accent-color:#e7662b;width:17px;height:17px}
+.week-time{display:flex;align-items:center;gap:8px;font-size:.72rem;color:#726053;font-weight:700}
+.week-time input{font:inherit;min-width:0;width:100%;border:1px solid #dcd2c7;background:#fff;color:#37291f;border-radius:8px;padding:8px;min-height:37px}
+.week-time input:disabled{opacity:.55;background:#f4f1ed}
+.schedule-hint{font-size:.74rem!important;line-height:1.65;color:#856c58;background:#fff3e9;border-left:3px solid #e7662b;padding:11px 12px;border-radius:7px;margin:14px 0 0!important}
+@media(max-width:700px){
+  .schedule-editor{padding:12px}
+  .weekly-hours-row{grid-template-columns:1fr 1fr;gap:8px}
+  .week-checkbox{grid-column:1/-1;font-size:.76rem}
+  .week-time{gap:5px;font-size:.7rem}
+  .week-time input{padding:8px 5px}
+}

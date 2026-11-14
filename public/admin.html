@@ -78,9 +78,25 @@
           <input type="checkbox" role="switch" id="accepting-orders" checked>
           <span class="toggle-ui" aria-hidden="true"></span>
         </label>
+        <label class="toggle-row schedule-mode-toggle" for="schedule-enabled">
+          <div>
+            <strong>Ativar horários automáticos</strong>
+            <small>A pizzaria abre e fecha para pedidos conforme os dias e horários que você programar.</small>
+          </div>
+          <input type="checkbox" role="switch" id="schedule-enabled">
+          <span class="toggle-ui" aria-hidden="true"></span>
+        </label>
+        <div class="schedule-editor" id="schedule-editor" hidden>
+          <div class="schedule-editor-heading">
+            <strong>Programação semanal</strong>
+            <small>Horário de Brasília (São Paulo) · Preencha os dias ativos e as horas de início e fim.</small>
+          </div>
+          <div class="weekly-hours-grid" id="weekly-hours-grid"></div>
+          <p class="schedule-hint">Horários podem passar da meia-noite (por exemplo, 18:00 até 01:00). Fora do horário, os clientes visualizam o cardápio, mas não enviam novos pedidos. Pedidos agendados não estão disponíveis nesta fase.</p>
+        </div>
         <div class="settings-grid">
-          <label>Dias de funcionamento<input id="opening-days" type="text" maxlength="90" placeholder="Ex.: Sábados e domingos"></label>
-          <label>Horários de funcionamento<input id="opening-hours" type="text" maxlength="60" placeholder="Ex.: 18h às 23h"></label>
+          <label id="manual-open-days">Dias de funcionamento (modo manual)<input id="opening-days" type="text" maxlength="90" placeholder="Ex.: Sábados e domingos"></label>
+          <label id="manual-open-hours">Horário informado (modo manual)<input id="opening-hours" type="text" maxlength="60" placeholder="Ex.: 18h às 23h"></label>
           <label>Previsão de entrega (minutos)<input id="delivery-eta" type="number" min="10" max="240" step="1" inputmode="numeric"></label>
         </div>
       </section>

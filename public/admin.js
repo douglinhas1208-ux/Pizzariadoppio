@@ -10,6 +10,25 @@
     {path:'assets/mussarela.webp',name:'Mussarela'}
   ];
   let state=null,dirty=false,busy=false,toastTimer;
+  const weekNames=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  const emptyWeek=()=>Array.from({length:7},()=>({enabled:false,start:'',end:''}));
+  function normalizeSchedule(){
+    if(typeof state.scheduleEnabled!=='boolean')state.scheduleEnabled=false;
+    if(!Array.isArray(state.weeklyHours)||state.weeklyHours.length!==7)state.weeklyHours=emptyWeek();
+  }
+  function renderSchedule(){
+    normalizeSchedule();
+    $('schedule-enabled').checked=state.scheduleEnabled;
+    $('schedule-editor').hidden=!state.scheduleEnabled;
+    $('manual-open-days').hidden=state.scheduleEnabled;
+    $('manual-open-hours').hidden=state.scheduleEnabled;
+    $('weekly-hours-grid').innerHTML=state.weeklyHours.map((day,i)=>'<div class="weekly-hours-row" data-weekday="'+i+'">'
+      +'<label class="week-checkbox"><input type="checkbox" data-day-enabled '+(day.enabled?'checked':'')+'> '+weekNames[i]+'</label>'
+      +'<label class="week-time">Das <input type="time" data-time="start" value="'+esc(day.start)+'" '+(!day.enabled?'disabled':'')+' aria-label="Abertura '+weekNames[i]+'"></label>'
+      +'<label class="week-time">Até <input type="time" data-time="end" value="'+esc(day.end)+'" '+(!day.enabled?'disabled':'')+' aria-label="Fechamento '+weekNames[i]+'"></label>'
+      +'</div>').join('');
+  }
+
   function screen(id){
     ['admin-loading','admin-setup','admin-login','admin-dashboard'].forEach(x=>{$(x).hidden=x!==id;});
     $('connection-state').textContent=id==='admin-dashboard'?'Acesso protegido':id==='admin-login'?'Login protegido':id==='admin-setup'?'Ativação pendente':'Conectando...';
@@ -61,7 +80,7 @@
     $('stat-products').textContent=list.length;
     $('stat-available').textContent=available.length;
     $('stat-min').textContent=money(Math.min(...list.map(x=>Number.isFinite(x.price)?x.price:500)));
-    $('order-badge').textContent=state.acceptingOrders?'Aceitando pedidos':'Pedidos pausados';
+    $('order-badge').textContent=!state.acceptingOrders?'Pedidos pausados':state.scheduleEnabled?'Horário automático habilitado':'Aceitando pedidos (manual)';
     $('order-badge').classList.toggle('paused',!state.acceptingOrders);
   }
   function photoOptions(current){
@@ -96,6 +115,7 @@
     $('opening-hours').value=state.openHours;
     $('delivery-eta').value=state.etaMinutes;
     $('accepting-orders').checked=state.acceptingOrders;
+    renderSchedule();
     renderProducts();
     clearDirty('Configuração carregada. Faça suas alterações e salve.');
   }
@@ -166,6 +186,32 @@
     if(!state)return;
     state.acceptingOrders=event.target.checked;renderStats();setDirty();
   });
+  $('schedule-enabled').addEventListener('change',event=>{
+    if(!state)return;
+    state.scheduleEnabled=event.target.checked;
+    renderSchedule();renderStats();setDirty();
+  });
+  $('weekly-hours-grid').addEventListener('change',event=>{
+    if(!state)return;
+    const row=event.target.closest('[data-weekday]');
+    if(!row)return;
+    const day=state.weeklyHours[Number(row.dataset.weekday)];
+    if(!day)return;
+    if(event.target.hasAttribute('data-day-enabled')){
+      day.enabled=event.target.checked;
+      row.querySelectorAll('input[type="time"]').forEach(el=>{el.disabled=!day.enabled;});
+      setDirty();
+    }
+  });
+  $('weekly-hours-grid').addEventListener('input',event=>{
+    if(!state)return;
+    const key=event.target.dataset.time;
+    if(key!=='start'&&key!=='end')return;
+    const row=event.target.closest('[data-weekday]');
+    const day=row&&state.weeklyHours[Number(row.dataset.weekday)];
+    if(!day)return;
+    day[key]=event.target.value;setDirty();
+  });
   $('admin-products').addEventListener('input',event=>{
     if(!state)return;
     const row=event.target.closest('[data-index]');
@@ -222,6 +268,11 @@
   $('save-state').addEventListener('click',async()=>{
     if(!state||!dirty||busy)return;
     if(state.products.some(p=>!Number.isFinite(p.price)||p.price<1||p.price>500))return toast('Revise o preço de todos os sabores.',true);
+    if(state.scheduleEnabled){
+      const active=state.weeklyHours.filter(d=>d.enabled);
+      if(!active.length)return toast('Selecione pelo menos um dia na programação automática.',true);
+      if(active.some(d=>!d.start||!d.end||d.start===d.end))return toast('Preencha horários de abertura e fechamento diferentes em cada dia selecionado.',true);
+    }
     const button=$('save-state');
     busy=true;button.disabled=true;button.textContent='Salvando...';
     try{

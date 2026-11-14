@@ -1,4 +1,4 @@
-import {adminApi,publicCatalogScript} from './admin.js';
+import {adminApi,publicCatalogScript,publicStoreStatus} from './admin.js';
 /*
  * Doppio Pizzas — cálculo de frete no Cloudflare Worker.
  * Segredo ORS_API_KEY: somente no Cloudflare, jamais no GitHub.
@@ -150,6 +150,10 @@ async function frete(request,env,url) {
 export default {
   async fetch(request,env) {
     const url=new URL(request.url);
+    if(url.pathname==='/api/store-status'){
+      if(request.method!=='GET')return siteError('method','Use GET.',405);
+      return publicStoreStatus(env);
+    }
     if(url.pathname==='/api/public-config.js'){
       if(request.method!=='GET')return siteError('method','Use GET.',405);
       return publicCatalogScript(env);
