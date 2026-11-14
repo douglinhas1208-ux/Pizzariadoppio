@@ -26,9 +26,20 @@ async function getJSON(uri,options={},ms=9500) {
   return data;
 }
 async function cepLookup(cep) {
-  const result=await getJSON('https://viacep.com.br/ws/'+cep+'/json/',{},6500);
-  if (!result || result.erro || !result.logradouro || !result.localidade || !result.uf) return null;
-  return {cep,street:result.logradouro,neighborhood:result.bairro||'',city:result.localidade,state:result.uf};
+  let result=null;
+  try {
+    result=await getJSON('https://viacep.com.br/ws/'+cep+'/json/',{},5500);
+    if(result?.logradouro && result.localidade && result.uf && !result.erro) {
+      return {cep,street:result.logradouro,neighborhood:result.bairro||'',city:result.localidade,state:result.uf};
+    }
+  } catch (_) { /* tentar segundo fornecedor de CEP */ }
+  try {
+    result=await getJSON('https://brasilapi.com.br/api/cep/v1/'+cep,{},6500);
+    if(result?.street && result.city && result.state) {
+      return {cep,street:result.street,neighborhood:result.neighborhood||'',city:result.city,state:result.state};
+    }
+  } catch (_) { /* endereço não encontrado ou fornecedores temporariamente indisponíveis */ }
+  return null;
 }
 function geocodeInfo(feature,street,number) {
   const p=feature.properties||{};
