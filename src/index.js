@@ -141,7 +141,7 @@ async function frete(request,env,url) {
     const km=meters/1000;
     if(km>MAX_KM+1e-6)return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address,distanceKm:Math.round(km*100)/100});
     const fee=5+Math.max(0,Math.ceil(km-5-1e-9));
-    return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision,origin:'Rua Firmino Morgado, 60',routeMode:'driving-car'});
+    return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision,origin:'Rua Firmino Morgado, 60',destination:{lon:destination[0],lat:destination[1]},routeMode:'driving-car'});
   } catch(e) {
     if(e.status===403 || e.status===401)return siteError('provider_access','O serviço de rotas recusou a chave. Confira o plano e a ativação da API.',503);
     return siteError('provider_unavailable_'+stage,'Não foi possível consultar o serviço de '+stage+' agora.',503,{upstreamStatus:typeof e.status==='number'?e.status:null});

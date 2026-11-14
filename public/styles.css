@@ -125,3 +125,33 @@
 .delivery-estimate.delivery-warning{background:#ffe6e6;color:#9b2424}
 .order-form .delivery-calculator .delivery-hint{font-size:.68rem;color:#89715d;line-height:1.5;margin:0}
 @media(max-width:600px){.delivery-calculator{padding:11px 10px}.delivery-rule{font-size:.67rem}}
+
+/* V12 — Frete automático por CEP, rota e confirmação opcional no mapa */
+.delivery-title{font-size:.9rem;color:#3e2a21;letter-spacing:-.02em;margin-bottom:4px}
+.delivery-address-result{font-size:.77rem;line-height:1.55;margin:0;background:#fff;border-left:3px solid #f26829;padding:10px 11px;color:#51483f;border-radius:5px}
+.delivery-field-grid{display:grid;grid-template-columns:minmax(95px,.8fr) minmax(125px,1.2fr);gap:9px}
+.delivery-field-grid>div{display:flex;flex-direction:column;gap:8px}
+.order-form .delivery-calculator>input{background:#fff}
+.delivery-calc-button,.delivery-map-button{border:0;border-radius:10px;min-height:43px;padding:10px 13px;font-weight:850;font-size:.81rem;cursor:pointer}
+.delivery-calc-button{background:#211c18;color:#fff}
+.delivery-calc-button:disabled{opacity:.55;cursor:not-allowed}
+.delivery-map-button{background:#fff1e4;border:1px solid #e6b98c;color:#82401b}
+.delivery-map-button[hidden]{display:none!important}
+.delivery-estimate.delivery-success{color:#215c35;background:#eaf6ee}
+.delivery-estimate{word-wrap:break-word}
+#doppio-map-overlay{position:fixed;inset:0;z-index:150;background:rgba(20,15,12,.77);padding:15px;display:flex;justify-content:center;align-items:center}
+#doppio-map-overlay[hidden]{display:none!important}
+body.doppio-map-open{overflow:hidden}
+.doppio-map-window{width:min(700px,100%);max-height:calc(100dvh - 30px);overflow:auto;background:#fff;border-radius:17px;box-shadow:0 15px 55px #0005;padding:15px;color:#251c16}
+.doppio-map-heading{display:flex;justify-content:space-between;gap:12px;align-items:start}
+.doppio-map-heading strong{font-size:1rem;font-weight:900}
+.doppio-map-heading p{font-size:.8rem;color:#73645a;line-height:1.5;margin:6px 0 12px}
+.doppio-map-close{border:0;background:#f5eee7;border-radius:11px;min-width:37px;min-height:37px;font-size:1.5rem;cursor:pointer}
+#doppio-map-canvas{width:100%;height:min(57vh,430px);min-height:270px;border-radius:10px;overflow:hidden;background:#e5e7e1;z-index:1}
+.doppio-map-bottom{padding:12px 0 2px;display:grid;gap:11px}
+#doppio-map-status{font-size:.78rem;color:#665749;line-height:1.45}
+.doppio-map-buttons{display:flex;gap:9px;flex-wrap:wrap}
+.doppio-map-buttons button{flex:1;min-width:135px;padding:10px 11px;border-radius:9px;border:1px solid #ddd2c6;background:#fff;color:#493b31;font-size:.79rem;font-weight:850;cursor:pointer}
+.doppio-map-buttons .doppio-map-primary{background:#ea612b;border-color:#ea612b;color:white}
+.doppio-map-buttons .doppio-map-primary:disabled{opacity:.5}
+@media(max-width:420px){.delivery-field-grid{grid-template-columns:1fr 1.1fr}.doppio-map-window{padding:10px}#doppio-map-overlay{padding:8px}}

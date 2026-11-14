@@ -23,7 +23,7 @@ window.DOPPIO_CONFIG = {
     minFee: 5, // valor mínimo de entrega em reais
     includedKm: 5, // até 5 km não há acréscimos
     extraKmFee: 1, // R$ 1,00 por km adicional iniciado
-    feeMessage: 'Frete mínimo R$ 5,00 até 5 km; +R$ 1,00 por km extra, até 10 km. Distância informada pelo cliente e confirmada pela equipe.',
+    feeMessage: 'Frete mínimo R$ 5,00 até 5 km; +R$ 1,00 por km extra, até 10 km. Distância calculada pela rota, após consulta do CEP e do número.',
     freeFrom: null // futuro: frete grátis a partir de um valor, quando houver política definida
   },
   options: {

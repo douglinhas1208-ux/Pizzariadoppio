@@ -48,22 +48,20 @@
     const stored = JSON.parse(localStorage.getItem('doppio-cart-v2') || localStorage.getItem('doppio-cart-v1') || '[]');
     if (Array.isArray(stored)) cart = stored.map(normalizeItem).filter(Boolean).slice(0,40);
   } catch (_) { /* O carrinho funciona mesmo se o armazenamento estiver indisponível. */ }
-  const form = {name:'', address:'', distanceKm:'', payment:(cfg.business.paymentMethods||[])[0]||'A combinar', notes:''};
-  // Sem endereço de origem e serviço de rotas, a distância é informada pelo cliente.
-  // O valor é uma estimativa; a equipe deve confirmar a quilometragem por ruas.
-  const maxKm = Number(cfg.delivery?.radiusKm)||10;
-  const baseKm = Number(cfg.delivery?.includedKm)||5;
-  const baseFee = Number(cfg.delivery?.minFee)||5;
-  const extraFee = Number(cfg.delivery?.extraKmFee)||1;
-  const numberKm = v => {
-    const str=String(v??'').trim().replace(',', '.');
-    if (!/^[0-9]+(?:[.][0-9]{1,2})?$/.test(str)) return null;
-    const n=Number(str);
-    return Number.isFinite(n)&&n>=0 ? n : null;
+  const form={name:'',cep:'',numero:'',complemento:'',address:'',payment:(cfg.business.paymentMethods||[])[0]||'A combinar',notes:''};
+  const maxKm=Number(cfg.delivery?.radiusKm)||10;
+  const baseKm=Number(cfg.delivery?.includedKm)||5;
+  const baseFee=Number(cfg.delivery?.minFee)||5;
+  const extraFee=Number(cfg.delivery?.extraKmFee)||1;
+  const displayKm=n=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2}).format(n);
+  const shipping={status:'idle',address:null,quote:null,pin:null,near:null,message:'',requestId:0};
+  let lookupTimer=null, quoteTimer=null;
+  const validNumber=()=>/^[0-9]{1,6}[a-zA-Z]?$/.test(form.numero.trim());
+  const cepDigits=()=>form.cep.replace(/\D/g,'');
+  const invalidateQuote=()=>{
+    shipping.quote=null;shipping.pin=null;shipping.near=null;shipping.message='';
+    shipping.requestId++;
   };
-  const displayKm = n => new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2}).format(n);
-  const deliveryFee = km => km===null || km>maxKm ? null
-    : baseFee + Math.max(0,Math.ceil(km-baseKm-1e-9))*extraFee;
   const halfEnabled = cfg.options?.halfHalfEnabled !== false && products.length >= 2;
   const categories = ['Todos', ...new Set(products.map(p => p.category || 'Outros')), ...(halfEnabled ? ['Meio a meio'] : [])];
   let filter = 'Todos';
@@ -100,64 +98,137 @@
     document.querySelector('.menu-count span').textContent = String(products.length + (halfEnabled ? 1 : 0)).padStart(2,'0');
     renderFilters();
   }
-  function totals() {
-    const count = cart.reduce((s,i)=>s+i.qty,0);
-    const pending = cart.some(i => !validPrice(itemPrice(i)));
-    const customized = cart.some(i => !!i.note);
-    const subtotal = cart.reduce((s,i) => s + (itemPrice(i) ?? 0)*i.qty, 0);
-    const rawKm=form.distanceKm.trim();
-    const km=rawKm ? numberKm(rawKm) : null;
-    const invalidKm=!!rawKm && km===null;
-    const outOfArea=km!==null && km>maxKm;
-    const fee=invalidKm ? null : deliveryFee(km);
-    const total = cart.length && !pending && !customized && validPrice(fee) ? subtotal + fee : null;
-    return {count,pending,customized,subtotal,fee,total,km,invalidKm,outOfArea};
+  function totals(){
+    const count=cart.reduce((sum,item)=>sum+item.qty,0);
+    const pending=cart.some(item=>!validPrice(itemPrice(item)));
+    const customized=cart.some(item=>!!item.note);
+    const subtotal=cart.reduce((sum,item)=>sum+(itemPrice(item)??0)*item.qty,0);
+    const fee=shipping.status==='ready' ? shipping.quote?.fee : null;
+    const km=shipping.status==='ready' ? shipping.quote?.distanceKm : null;
+    const total=cart.length&&!pending&&!customized&&validPrice(fee)?subtotal+fee:null;
+    return {count,pending,customized,subtotal,fee,total,km,outOfArea:shipping.status==='outside'};
   }
-  function deliveryPreview(s) {
-    if(s.invalidKm) return 'Distância inválida. Exemplo: 5,5 km.';
-    if(s.outOfArea) return `Fora da área de entrega (máximo de ${maxKm} km).`;
-    if(s.km===null) return 'Informe a distância aproximada para calcular o frete.';
-    return `Frete estimado: ${money(s.fee)} para ${displayKm(s.km)} km · sujeito à confirmação.`;
+  function shippingPreview(){
+    if(shipping.status==='ready')return 'Rota calculada: '+displayKm(shipping.quote.distanceKm)+' km · Frete '+money(shipping.quote.fee)+' (até '+maxKm+' km).';
+    if(shipping.status==='loading-cep')return 'Buscando endereço do CEP...';
+    if(shipping.status==='calculating')return 'Calculando rota pelas ruas...';
+    if(shipping.status==='map-required')return shipping.message||'Confirme a entrada da casa no mapa para calcular com precisão.';
+    if(shipping.status==='outside')return 'Fora da área de entrega de até '+maxKm+' km.';
+    if(shipping.status==='error')return shipping.message||'Não foi possível calcular o frete. Tente novamente.';
+    if(!shipping.address)return 'Digite seu CEP para preencher a rua automaticamente.';
+    if(!validNumber())return 'Agora informe o número da residência.';
+    return 'Calcule o frete automaticamente com CEP e número.';
   }
-  function updateDeliveryLive() {
-    const s=totals();
+  function updateDeliveryLive(){
+    const t=totals(),text=shippingPreview();
+    document.querySelectorAll('[data-delivery-address]').forEach(el=>{
+      el.textContent=form.address||'O endereço será preenchido após a consulta do CEP.';
+    });
     document.querySelectorAll('[data-delivery-preview]').forEach(el=>{
-      el.textContent=deliveryPreview(s);
-      el.classList.toggle('delivery-warning',s.invalidKm||s.outOfArea);
+      el.textContent=text;el.classList.toggle('delivery-warning',shipping.status==='error'||shipping.status==='outside');
+      el.classList.toggle('delivery-success',shipping.status==='ready');
     });
-    document.querySelectorAll('[data-delivery-fee]').forEach(el=>{
-      el.textContent=s.outOfArea?'Fora da área':s.invalidKm?'Distância inválida':formatPrice(s.fee);
+    document.querySelectorAll('[data-delivery-fee]').forEach(el=>{el.textContent=shipping.status==='outside'?'Fora da área':validPrice(t.fee)?money(t.fee):'A calcular';});
+    document.querySelectorAll('[data-delivery-label]').forEach(el=>{el.textContent=validPrice(t.fee)?'Frete calculado':'Taxa de entrega';});
+    document.querySelectorAll('[data-order-total]').forEach(el=>{el.textContent=t.total===null?'A confirmar':money(t.total);});
+    document.querySelectorAll('[data-map-confirm]').forEach(el=>{el.hidden=shipping.status!=='map-required';});
+    document.querySelectorAll('[data-calc-frete]').forEach(el=>{
+      el.disabled=!shipping.address||!validNumber()||shipping.status==='calculating';
+      el.textContent=shipping.status==='calculating'?'Calculando...':shipping.status==='ready'?'Recalcular frete':'Calcular frete';
     });
-    document.querySelectorAll('[data-delivery-label]').forEach(el=>{
-      el.textContent=validPrice(s.fee)?'Frete estimado':'Taxa de entrega';
-    });
-    document.querySelectorAll('[data-order-total]').forEach(el=>{
-      el.textContent=s.total===null?'A confirmar':money(s.total);
-    });
-    if($('mobile-total')) $('mobile-total').textContent=s.total!==null?money(s.total):'Conferir pedido →';
+    if($('mobile-total'))$('mobile-total').textContent=t.total!==null?money(t.total):'Conferir pedido →';
+  }
+  async function lookupCep(){
+    const cep=cepDigits();if(cep.length!==8)return;
+    const requestId=++shipping.requestId;
+    shipping.status='loading-cep';shipping.message='';updateDeliveryLive();
+    try{
+      const response=await fetch('/api/cep?cep='+encodeURIComponent(cep),{cache:'no-store'});
+      const data=await response.json();
+      if(requestId!==shipping.requestId)return;
+      if(!response.ok||!data.ok)throw new Error(data.message||'CEP não encontrado.');
+      shipping.address=data.address;
+      form.address=[data.address.street,data.address.neighborhood,data.address.city+' - '+data.address.state].filter(Boolean).join(', ');
+      shipping.status='waiting-number';updateDeliveryLive();
+      if(validNumber())scheduleQuote(350);
+    }catch(error){
+      if(requestId!==shipping.requestId)return;
+      shipping.address=null;form.address='';
+      shipping.status='error';shipping.message=error.message||'Não foi possível consultar CEP.';updateDeliveryLive();
+    }
+  }
+  async function calculateShipping(pin=null){
+    clearTimeout(quoteTimer);
+    const cep=cepDigits();const numero=form.numero.trim();
+    if(cep.length!==8||!validNumber()||!shipping.address){
+      toast('Preencha um CEP válido e o número da residência.');return;
+    }
+    const requestId=++shipping.requestId;shipping.status='calculating';shipping.quote=null;shipping.message='';
+    updateDeliveryLive();
+    try{
+      const response=await fetch('/api/frete',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cep,numero,...(pin?{pin}:{})})});
+      const data=await response.json();
+      if(requestId!==shipping.requestId)return;
+      if(response.status===409&&data.code==='confirm_pin'){
+        shipping.near=data.near||null;shipping.message=data.message;shipping.status='map-required';updateDeliveryLive();return;
+      }
+      if(!response.ok||!data.ok){
+        shipping.message=data.message||'Não foi possível calcular a rota.';
+        shipping.status=data.code==='outside_area'||data.code==='outside_state'?'outside':'error';
+        updateDeliveryLive();return;
+      }
+      if(!Number.isFinite(data.fee)||!Number.isFinite(data.distanceKm))throw new Error('Resposta de distância inválida.');
+      shipping.status='ready';shipping.quote=data;shipping.pin=pin;updateDeliveryLive();
+    }catch(error){
+      if(requestId!==shipping.requestId)return;
+      shipping.status='error';shipping.message=error.message||'Falha de conexão ao calcular o frete.';updateDeliveryLive();
+    }
+  }
+  function scheduleQuote(delay=750){
+    clearTimeout(quoteTimer);
+    if(!shipping.address||!validNumber())return;
+    quoteTimer=setTimeout(()=>calculateShipping(),delay);
+  }
+  function openAddressMap(){
+    if(!shipping.address||!validNumber())return toast('Informe o CEP e número antes de marcar no mapa.');
+    if(!window.DOPPIO_MAP)return toast('Mapa indisponível. Atualize a página e tente novamente.');
+    const center=shipping.near||{lat:-23.5532045,lon:-46.4938778};
+    window.DOPPIO_MAP.show({lat:center.lat,lon:center.lon,onConfirm:coords=>calculateShipping(coords)});
   }
   function renderCartContents() {
     const s = totals();
     const items = cart.length ? `<div class="cart-items">${cart.map(i => `<div class="cart-item"><div class="cart-item-main"><div class="cart-item-name">${esc(formatName(i))}</div><div class="cart-item-price">${formatPrice(itemPrice(i))}${i.note?' · valor com alterações a confirmar':''}</div>${i.note?`<p class="item-note"><b>Obs.:</b> ${esc(i.note)}</p>`:''}<button class="edit-item-note" data-edit-note="${esc(i.key)}" type="button">✎ ${i.note?'Editar observação':'Adicionar observação'}</button></div><div class="qty-controls"><button type="button" data-qty="${esc(i.key)}" data-step="-1" aria-label="Diminuir quantidade de ${esc(formatName(i))}">−</button><span>${i.qty}</span><button type="button" data-qty="${esc(i.key)}" data-step="1" aria-label="Aumentar quantidade de ${esc(formatName(i))}">+</button></div></div>`).join('')}</div>`
       : '<div class="cart-empty"><span class="cart-empty-icon">🍕</span><b>Seu pedido começa aqui.</b><p>Escolha uma pizza e monte seu pedido.</p></div>';
-    const summary = cart.length ? `<div class="cart-line"></div>
-      <div class="summary-row"><span>${s.pending?'Parcial dos sabores com preço':s.customized?'Subtotal base estimado':'Subtotal'}</span><strong>${s.pending && !s.subtotal?'A confirmar':money(s.subtotal)}</strong></div>
-      <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete estimado':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':s.invalidKm?'Distância inválida':formatPrice(s.fee)}</strong></div>
+    const summary=cart.length?`<div class="cart-line"></div>
+      <div class="summary-row"><span>${s.pending?'Parcial dos sabores com preço':s.customized?'Subtotal base estimado':'Subtotal'}</span><strong>${s.pending&&!s.subtotal?'A confirmar':money(s.subtotal)}</strong></div>
+      <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete calculado':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':validPrice(s.fee)?money(s.fee):'A calcular'}</strong></div>
       <div class="summary-row summary-total"><span>Total estimado</span><strong data-order-total>${s.total===null?'A confirmar':money(s.total)}</strong></div>
-      <div class="cart-pending">${s.outOfArea?'Esta distância ultrapassa o limite de entrega.':s.invalidKm?'Digite uma distância válida para calcular o frete.':s.km===null?'Informe os quilômetros para estimar o frete. Os preços das pizzas ainda serão confirmados.':s.pending?'Frete estimado pela distância informada. Preços das pizzas ainda a confirmar.':s.customized?'O frete foi estimado; alterações de ingredientes e valor final serão confirmados no WhatsApp.':'O frete e a disponibilidade serão confirmados no WhatsApp.'}</div>` : '';
-    const fields = cart.length ? `<form class="order-form" onsubmit="return false">
-      <label for="{prefix}-name">Seu nome <span class="required-mark">*</span></label><input id="{prefix}-name" data-field="name" autocomplete="name" maxlength="70" placeholder="Como podemos chamar você?" value="${esc(form.name)}" required>
-      <label for="{prefix}-address">Endereço de entrega <span class="required-mark">*</span></label><textarea id="{prefix}-address" data-field="address" rows="3" maxlength="240" placeholder="Rua, número, bairro, cidade e referência" required>${esc(form.address)}</textarea>
+      <div class="cart-pending">${shipping.status==='ready'?'Frete calculado pela rota. Preços das pizzas e alterações ainda precisam de confirmação.':'O frete será calculado pela rota das ruas antes do envio do pedido.'}</div>`:'';
+    const fields=cart.length?`<form class="order-form" onsubmit="return false">
+      <label for="{prefix}-name">Seu nome <span class="required-mark">*</span></label>
+      <input id="{prefix}-name" data-field="name" autocomplete="name" maxlength="70" placeholder="Como podemos chamar você?" value="${esc(form.name)}" required>
       <div class="delivery-calculator">
-        <label for="{prefix}-distanceKm">Distância aproximada da entrega (km) <span class="distance-optional">opcional</span></label>
-        <div class="delivery-distance-field"><input id="{prefix}-distanceKm" data-field="distanceKm" type="text" inputmode="decimal" autocomplete="off" maxlength="8" placeholder="Ex.: 6,2" value="${esc(form.distanceKm)}" aria-describedby="{prefix}-distance-rule"><span>km</span></div>
-        <p class="delivery-rule" id="{prefix}-distance-rule">Até ${baseKm} km: ${money(baseFee)} · Depois: +${money(extraFee)} por km iniciado · Limite: ${maxKm} km.</p>
-        <p class="delivery-estimate ${s.outOfArea||s.invalidKm?'delivery-warning':''}" data-delivery-preview aria-live="polite">${esc(deliveryPreview(s))}</p>
-        <p class="delivery-hint">A distância não é medida automaticamente: informe uma estimativa. A pizzaria confirma o trajeto e o frete pelo WhatsApp.</p>
+        <strong class="delivery-title">Frete automático por endereço</strong>
+        <label for="{prefix}-cep">CEP de entrega <span class="required-mark">*</span></label>
+        <input id="{prefix}-cep" data-field="cep" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" value="${esc(form.cep)}" required>
+        <p class="delivery-address-result" data-delivery-address>${esc(form.address||'O endereço será preenchido após a consulta do CEP.')}</p>
+        <div class="delivery-field-grid">
+          <div><label for="{prefix}-numero">Número <span class="required-mark">*</span></label>
+            <input id="{prefix}-numero" data-field="numero" inputmode="numeric" maxlength="7" placeholder="Nº da casa" value="${esc(form.numero)}" required></div>
+          <div><label for="{prefix}-complemento">Complemento</label>
+            <input id="{prefix}-complemento" data-field="complemento" maxlength="65" placeholder="Apto / Bloco" value="${esc(form.complemento)}"></div>
+        </div>
+        <button type="button" data-calc-frete class="delivery-calc-button">Calcular frete</button>
+        <button type="button" data-map-confirm class="delivery-map-button" ${shipping.status==='map-required'?'':'hidden'}>📍 Confirmar entrada no mapa</button>
+        <p class="delivery-rule">Até ${baseKm} km: ${money(baseFee)} · Depois: +${money(extraFee)} por km iniciado · Máximo de ${maxKm} km.</p>
+        <p class="delivery-estimate ${shipping.status==='outside'||shipping.status==='error'?'delivery-warning':''}" data-delivery-preview aria-live="polite">${esc(shippingPreview())}</p>
+        <p class="delivery-hint">Distância calculada pelas ruas. Quando o número não é encontrado, confirme a entrada no mapa.</p>
       </div>
-      <label for="{prefix}-payment">Forma de pagamento</label><select id="{prefix}-payment" data-field="payment">${(cfg.business.paymentMethods||['A combinar']).map(x=>`<option value="${esc(x)}" ${x===form.payment?'selected':''}>${esc(x)}</option>`).join('')}</select>
-      <label for="{prefix}-notes">Observações gerais (opcional)</label><textarea id="{prefix}-notes" data-field="notes" rows="2" maxlength="300" placeholder="Referência do endereço, instruções de entrega...">${esc(form.notes)}</textarea>
-    </form>` : '';
+      <label for="{prefix}-payment">Forma de pagamento</label>
+      <select id="{prefix}-payment" data-field="payment">${(cfg.business.paymentMethods||['A combinar']).map(x=>`<option value="${esc(x)}" ${x===form.payment?'selected':''}>${esc(x)}</option>`).join('')}</select>
+      <label for="{prefix}-notes">Observações gerais (opcional)</label>
+      <textarea id="{prefix}-notes" data-field="notes" rows="2" maxlength="300" placeholder="Referência do endereço, instruções de entrega...">${esc(form.notes)}</textarea>
+    </form>`:'';
     return `<div class="cart-sticky"><div class="cart-title-row"><h3 class="desktop-cart-title">${cartIcon} Meu carrinho</h3><span class="cart-count">${s.count} ${s.count===1?'item':'itens'}</span></div>
       ${items}${summary}${fields}
       ${cart.length?'<button class="clear-cart" data-clear type="button">Limpar pedido</button>':''}
@@ -170,6 +241,7 @@
     $('cart-mobile').innerHTML = renderCartContents().replaceAll('{prefix}', 'mobile');
     $('mobile-count').textContent = $('header-count').textContent = stats.count;
     $('mobile-total').textContent = stats.total!==null ? money(stats.total) : 'Conferir pedido →';
+    updateDeliveryLive();
     saveCart();
   }
   function add(item) {
@@ -227,23 +299,26 @@
   function checkout() {
     if (!cart.length) return toast('Adicione uma pizza primeiro.');
     if (form.name.trim().length<2) { toast('Informe seu nome para continuar.'); focusMissing('name'); return; }
-    if (cfg.options?.requireDeliveryAddress !== false && form.address.trim().length < 8) {
-      toast('Informe o endereço, número e bairro.'); focusMissing('address'); return;
+    if(cepDigits().length!==8){toast('Informe o CEP para calcular o frete.');focusMissing('cep');return;}
+    if(!validNumber()){toast('Informe o número da residência.');focusMissing('numero');return;}
+    if(!form.address||!shipping.address){toast('Aguarde a consulta do CEP.');focusMissing('cep');return;}
+    const s=totals();
+    if(shipping.status!=='ready'||!shipping.quote){
+      toast(shipping.status==='map-required'?'Confirme a entrada no mapa para calcular o frete.':'Calcule o frete antes de enviar o pedido.');
+      focusMissing('numero');return;
     }
-    const s = totals();
-    if(s.invalidKm){toast('Digite uma distância válida em km (ex.: 5,5).');focusMissing('distanceKm');return;}
-    if(s.outOfArea){toast(`Distância acima dos ${maxKm} km atendidos.`);focusMissing('distanceKm');return;}
     const when = new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date());
     const lines = [
       `🍕 *CONSULTA DE PEDIDO — ${cfg.business.name.toUpperCase()}*`,
       `Enviado em: ${when}`,'',
       ...cart.flatMap(i => [`${i.qty}x ${formatName(i)} — ${validPrice(itemPrice(i)) ? money(itemPrice(i)*i.qty) + (i.note?' (preço base; alterações a confirmar)':'') : 'preço a confirmar'}`, ...(i.note?[`   ✎ Observação desta pizza: ${i.note}`]:[])]),
       '', `Subtotal base: ${s.pending?'a confirmar':money(s.subtotal)}`,
-      `Distância estimada: ${s.km===null?'não informada':displayKm(s.km)+' km (informada pelo cliente)'}`,
-      `Frete: ${formatPrice(s.fee)}${validPrice(s.fee)?' (estimado; sujeito à confirmação)':' (a confirmar)'}`,
+      `Distância pela rota: ${displayKm(s.km)} km (OpenRouteService)`,
+      `Frete calculado: ${money(s.fee)}`,
       `Total: ${s.total===null?'a confirmar':money(s.total)}`,'',
       `*Cliente:* ${form.name.trim()}`,
-      `*Endereço:* ${form.address.trim()||'A informar'}`,
+      `*Endereço:* ${form.address}, nº ${form.numero.trim()}${form.complemento.trim()?', '+form.complemento.trim():''} · CEP ${form.cep.trim()}`,
+      ...(shipping.quote.destination?[`*Mapa de entrega:* https://www.openstreetmap.org/?mlat=${shipping.quote.destination.lat}&mlon=${shipping.quote.destination.lon}#map=18/${shipping.quote.destination.lat}/${shipping.quote.destination.lon}`]:[]),
       `*Pagamento:* ${form.payment}`,
       `*Observações gerais:* ${form.notes.trim()||'Nenhuma'}`,'',
       '_🍕 A Doppio Pizzas confirmará os valores, o frete, a disponibilidade e as alterações de ingredientes antes de finalizar o pedido._'
@@ -287,19 +362,33 @@
     const qty=event.target.closest('[data-qty]');
     if (qty) {quantity(qty.dataset.qty,Number(qty.dataset.step));return;}
     if (event.target.closest('[data-clear]')) {cart=[];renderCart();toast('Pedido esvaziado.');return;}
+    if (event.target.closest('[data-calc-frete]')) {calculateShipping();return;}
+    if (event.target.closest('[data-map-confirm]')) {openAddressMap();return;}
     if (event.target.closest('[data-checkout]')) {checkout();return;}
     const filterButton=event.target.closest('[data-filter]');
     if (filterButton) {filter=filterButton.dataset.filter;renderProducts();}
   });
-  const updateField = event => {
+  const updateField=event=>{
     const key=event.target.dataset?.field;
-    if (Object.hasOwn(form,key)) {
-      form[key]=event.target.value;
-      if(key==='distanceKm') updateDeliveryLive();
+    if(!Object.hasOwn(form,key))return;
+    form[key]=event.target.value;
+    if(key==='cep'){
+      form.cep=cepDigits().slice(0,8).replace(/^(\d{5})(\d)/,'$1-$2');
+      event.target.value=form.cep;
+      clearTimeout(lookupTimer);clearTimeout(quoteTimer);
+      invalidateQuote();shipping.address=null;form.address='';
+      shipping.status='idle';updateDeliveryLive();
+      if(cepDigits().length===8)lookupTimer=setTimeout(lookupCep,350);
+    }else if(key==='numero'){
+      clearTimeout(quoteTimer);
+      if(shipping.status==='loading-cep'){shipping.quote=null;updateDeliveryLive();return;}
+      invalidateQuote();
+      shipping.status=shipping.address?'waiting-number':'idle';updateDeliveryLive();
+      if(shipping.address&&validNumber())scheduleQuote();
     }
   };
   document.addEventListener('input',updateField);
-  document.addEventListener('change',updateField);
+  document.addEventListener('change',event=>{if(event.target.dataset?.field==='payment')form.payment=event.target.value;});
   $('header-cart').addEventListener('click',()=>openDialog('cart-drawer'));
   $('mobile-cart-button').addEventListener('click',()=>openDialog('cart-drawer'));
   $('close-drawer').addEventListener('click',closeDialogs);
