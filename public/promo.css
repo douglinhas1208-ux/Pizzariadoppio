@@ -1,0 +1,18 @@
+/* Doppio Pizzas — banner promocional isolado, sem alterar os estilos existentes. */
+.promo-section{background:#fff9f4;padding:24px 0 0}
+.promo-card{display:grid;grid-template-columns:205px minmax(0,1fr) auto;align-items:center;gap:24px;min-height:168px;border-radius:22px;overflow:hidden;background:linear-gradient(115deg,#30241e 0%,#211b17 60%,#191715 100%);color:#fff;border:1px solid #654332;box-shadow:0 14px 33px rgba(47,25,15,.14);position:relative}
+.promo-card:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 88% 10%,rgba(242,104,41,.18),transparent 42%);pointer-events:none}
+.promo-photo{height:100%;min-height:168px;overflow:hidden;position:relative;background:#4d2e1c}
+.promo-photo img{width:100%;height:100%;object-fit:cover;object-position:center;position:absolute;inset:0}
+.promo-photo:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 65%,rgba(33,27,23,.65))}
+.promo-copy{position:relative;z-index:1;padding:19px 0}
+.promo-label{display:inline-flex;align-items:center;gap:7px;border:1px solid #f2682961;background:#f2682920;border-radius:999px;padding:5px 11px;color:#ffab76;font-weight:900;font-size:.68rem;letter-spacing:.14em}
+.promo-copy h2{font-size:clamp(1.42rem,2.2vw,2rem);font-weight:900;letter-spacing:-.045em;line-height:1.18;margin:11px 0 7px}
+.promo-copy h2 strong{color:var(--orange2);font-weight:950}
+.promo-copy p{font-size:.78rem;color:#d3c5bb;margin:0}
+.promo-action{position:relative;z-index:1;display:flex;align-items:center;gap:10px;padding-right:25px}
+.promo-action .button{font-size:.78rem;padding:13px 15px;border-radius:11px;gap:10px;white-space:nowrap}
+.promo-drink{font-size:2.8rem;line-height:1;transform:rotate(-12deg);display:block;filter:drop-shadow(0 5px 10px #0004)}
+@media(max-width:1000px){.promo-card{grid-template-columns:155px minmax(0,1fr);gap:16px}.promo-photo{min-height:185px}.promo-action{grid-column:2;padding:0 20px 17px 0;margin-top:-11px}.promo-copy{padding:17px 18px 12px 0}.promo-drink{font-size:1.9rem}.promo-action .button{padding:10px 14px}}
+@media(max-width:600px){.promo-section{padding-top:16px}.promo-card{grid-template-columns:99px minmax(0,1fr);gap:12px;border-radius:16px;min-height:0}.promo-photo{min-height:205px}.promo-photo img{object-position:center}.promo-copy{padding:13px 13px 0 0}.promo-label{font-size:.53rem;padding:5px 8px;letter-spacing:.07em}.promo-copy h2{font-size:clamp(1.08rem,4.7vw,1.5rem);line-height:1.2;margin:9px 0 7px}.promo-copy p{font-size:.66rem;line-height:1.4}.promo-action{grid-column:2;gap:6px;padding:2px 12px 12px 0;margin:0}.promo-drink{font-size:1.5rem}.promo-action .button{font-size:.7rem;padding:10px 11px;gap:6px}}
+@media(max-width:370px){.promo-card{grid-template-columns:82px minmax(0,1fr);gap:9px}.promo-copy h2{font-size:1.03rem}.promo-action .button{font-size:.66rem}}
