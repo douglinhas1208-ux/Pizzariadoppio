@@ -1,28 +1,148 @@
 /*
- * Doppio Pizzas — servidor Cloudflare Worker.
- * Serve os arquivos do cardápio sem alterações e reserva /api/* para
- * integração do frete com OpenRouteService.
- * ORS_API_KEY deve ser cadastrada como Secret no painel Cloudflare;
- * nunca coloque o valor no repositório.
+ * Doppio Pizzas — cálculo de frete no Cloudflare Worker.
+ * Segredo ORS_API_KEY: somente no Cloudflare, jamais no GitHub.
+ * Distância de percurso viário, não raio em linha reta.
  */
+const ORS = 'https://api.heigit.org';
+const SHOP = 'Rua Firmino Morgado, 60, Jardim Brasília, São Paulo, SP, Brasil';
+const MAX_KM = 10;
+const json = (value, status = 200) => new Response(JSON.stringify(value), {
+  status,
+  headers: {'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}
+});
+const normalize = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\b(rua|av|avenida|travessa|numero|n|do|da|de|dos|das)\b/g,' ').replace(/\s+/g,' ').trim();
+const validCoord = point => Array.isArray(point) && point.length===2 && point.every(Number.isFinite) && point[0]>-48 && point[0]<-45 && point[1]>-25 && point[1]<-22;
+const siteError = (code, message, status=400, details={}) => json({ok:false,code,message,...details},status);
+async function getJSON(uri,options={},ms=9500) {
+  const res=await fetch(uri,{...options,signal:AbortSignal.timeout(ms),headers:{accept:'application/json',...(options.headers||{})}});
+  let data;try{data=await res.json()}catch(_){data=null}
+  if (!res.ok) {
+    const e=new Error('upstream '+res.status);
+    e.status=res.status;
+    throw e;
+  }
+  return data;
+}
+async function cepLookup(cep) {
+  const result=await getJSON('https://viacep.com.br/ws/'+cep+'/json/',{},6500);
+  if (!result || result.erro || !result.logradouro || !result.localidade || !result.uf) return null;
+  return {cep,street:result.logradouro,neighborhood:result.bairro||'',city:result.localidade,state:result.uf};
+}
+function geocodeInfo(feature,street,number) {
+  const p=feature.properties||{};
+  const coord=feature.geometry?.coordinates;
+  if(!validCoord(coord))return null;
+  const searched=normalize(street);
+  const found=normalize(p.street || p.name || '');
+  const label=normalize(p.label);
+  const words=searched.split(' ').filter(x=>x.length>2);
+  const similarity=words.length && words.every(x=>found.includes(x) || label.includes(x));
+  if(!similarity)return null;
+  const n=String(p.housenumber||'').trim();
+  const sameNumber=n===String(number);
+  const fullAddress=p.layer==='address' && sameNumber;
+  return {point:coord,quality:fullAddress?'number':'street',label:p.label||'',layer:p.layer||'',housenumber:n,confidence:typeof p.confidence==='number'?p.confidence:null};
+}
+async function geocodeAddress(apiKey,street,number,neighborhood,city,state,cep) {
+  const query=[street+' '+number,neighborhood,city,state,cep,'Brasil'].filter(Boolean).join(', ');
+  const url=new URL(ORS+'/pelias/v1/search');
+  url.searchParams.set('text',query);
+  url.searchParams.set('size','6');
+  url.searchParams.set('boundary.country','BRA');
+  const data=await getJSON(url.toString(),{headers:{Authorization:apiKey}},9500);
+  const matches=(data.features||[]).map(f=>geocodeInfo(f,street,number)).filter(Boolean);
+  matches.sort((a,b)=>(b.quality==='number')-(a.quality==='number') || (b.confidence||0)-(a.confidence||0));
+  return matches[0]||null;
+}
+function haversine(a,b) {
+  const toRad=x=>x*Math.PI/180;
+  const dlat=toRad(b[1]-a[1]),dlon=toRad(b[0]-a[0]);
+  const h=Math.sin(dlat/2)**2+Math.cos(toRad(a[1]))*Math.cos(toRad(b[1]))*Math.sin(dlon/2)**2;
+  return 12742*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+async function route(apiKey,origin,dest) {
+  const response=await getJSON(ORS+'/openrouteservice/v2/directions/driving-car/json',{
+    method:'POST',
+    headers:{Authorization:apiKey,'content-type':'application/json'},
+    body:JSON.stringify({coordinates:[origin,dest],instructions:false,geometry:false})
+  },11000);
+  const meters=response.routes?.[0]?.summary?.distance;
+  if(!Number.isFinite(meters) || meters<0)throw new Error('route_malformed');
+  return meters;
+}
+async function antiAbuse(request,url) {
+  const origin=request.headers.get('origin');
+  if(origin && origin!==url.origin)return false;
+  const ip=request.headers.get('cf-connecting-ip');
+  if(!ip)return true;
+  try {
+    const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ip));
+    const sig=Array.from(new Uint8Array(bytes)).slice(0,10).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const cacheKey=new Request(url.origin+'/__ors_rate_'+sig);
+    const existing=await caches.default.match(cacheKey);
+    if(existing)return false;
+    await caches.default.put(cacheKey,new Response('1',{headers:{'cache-control':'public, max-age=4'}}));
+  } catch(_){/* não interromper pedidos por indisponibilidade transitória do cache */}
+  return true;
+}
+async function frete(request,env,url) {
+  if(!env.ORS_API_KEY)return siteError('unconfigured','Serviço de rotas em configuração.',503);
+  if(!await antiAbuse(request,url))return siteError('rate_limit','Aguarde alguns segundos antes de recalcular.',429);
+  const size=Number(request.headers.get('content-length')||0);
+  if(size>900)return siteError('payload','Dados de endereço excessivos.',413);
+  let input;
+  try {input=await request.json()}catch(_){return siteError('json','Dados inválidos.')}
+  const cep=String(input?.cep||'').replace(/\D/g,'');
+  const number=String(input?.numero||'').trim();
+  if(!/^\d{8}$/.test(cep) || !/^[0-9]{1,6}[a-zA-Z]?$/.test(number))return siteError('invalid_address','Informe um CEP válido e o número da residência.');
+  const pin=input?.pin;
+  if(pin!=null&&!validCoord(pin))return siteError('invalid_pin','Ponto do mapa inválido.');
+  try {
+    const address=await cepLookup(cep);
+    if(!address)return siteError('cep_not_found','CEP não localizado. Confira os números.',422);
+    if(address.state!=='SP')return siteError('outside_state','Endereço fora da área de entrega.',422);
+    const origin=await geocodeAddress(env.ORS_API_KEY,'Rua Firmino Morgado','60','Jardim Brasília','São Paulo','SP','03583-000');
+    if(!origin || origin.quality!=='number'){
+      return siteError('origin_setup','A localização exata de saída da pizzaria precisa ser confirmada no mapa antes de liberar o frete.',503,{
+        originSuggestion:origin?{lon:origin.point[0],lat:origin.point[1],quality:origin.quality,label:origin.label}:null
+      });
+    }
+    const candidate=await geocodeAddress(env.ORS_API_KEY,address.street,number,address.neighborhood,address.city,address.state,cep);
+    if(!candidate)return siteError('destination_not_found','Não conseguimos localizar a rua com segurança. Confira o CEP e procure a pizzaria.',422,{address});
+    if(candidate.quality!=='number' && !pin){
+      return siteError('confirm_pin','A rua foi localizada, mas o número não foi identificado no mapa. Marque a entrada da residência para calcular corretamente.',409,{
+        address,near:{lon:candidate.point[0],lat:candidate.point[1]},label:candidate.label
+      });
+    }
+    let destination=candidate.point;
+    if(pin){
+      if(haversine(candidate.point,pin)>1.5)return siteError('pin_too_far','O ponto marcado está distante da rua informada. Confira o CEP.',422);
+      destination=pin;
+    }
+    if(haversine(origin.point,destination)>MAX_KM+2){
+      return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address});
+    }
+    const meters=await route(env.ORS_API_KEY,origin.point,destination);
+    const km=meters/1000;
+    if(km>MAX_KM+1e-6)return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address,distanceKm:Math.round(km*100)/100});
+    const fee=5+Math.max(0,Math.ceil(km-5-1e-9));
+    return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision:pin?'pin_confirmado':'numero_localizado',origin:'Rua Firmino Morgado, 60',routeMode:'driving-car'});
+  } catch(e) {
+    if(e.status===403 || e.status===401)return siteError('provider_access','O serviço de rotas recusou a chave. Confira o plano e a ativação da API.',503);
+    return siteError('provider_unavailable','Não foi possível calcular a rota agora. Tente novamente ou confirme pelo WhatsApp.',503);
+  }
+}
 export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-
-    if (url.pathname === '/api/status') {
-      return new Response(
-        JSON.stringify({ service: 'doppio-frete', configured: Boolean(env.ORS_API_KEY) }),
-        { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } }
-      );
+  async fetch(request,env) {
+    const url=new URL(request.url);
+    if(url.pathname==='/api/status'){
+      return json({service:'doppio-frete',configured:Boolean(env.ORS_API_KEY)});
     }
-
-    if (url.pathname.startsWith('/api/')) {
-      return new Response(
-        JSON.stringify({ error: 'API em configuração. O cardápio continua disponível.' }),
-        { status: 503, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } }
-      );
+    if(url.pathname==='/api/frete'){
+      if(request.method!=='POST')return siteError('method','Use POST.',405);
+      return frete(request,env,url);
     }
-
+    if(url.pathname.startsWith('/api/'))return siteError('not_found','Rota não encontrada.',404);
     return env.ASSETS.fetch(request);
   }
 };
