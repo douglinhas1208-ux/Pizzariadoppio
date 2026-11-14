@@ -214,3 +214,72 @@ body.doppio-map-open{overflow:hidden}
   .pizza-card .price-featured .price-integer{font-size:1.88rem}
   .pizza-card .price-featured .price-eyebrow{font-size:.55rem}
 }
+
+/* V15 — Checkout de revisão profissional, sem alterar o cardápio */
+.checkout-step-hint{display:flex;align-items:center;gap:9px;margin:16px 0 9px!important;color:#776555;font-size:.73rem!important;font-weight:750}
+.checkout-step-hint span{display:inline-grid;place-items:center;background:#fff0df;border:1px solid #e9bb91;border-radius:50%;width:23px;height:23px;min-width:23px;color:#b4511f;font-weight:900}
+.checkout-review-button{letter-spacing:.01em}
+.checkout-review{position:fixed;z-index:44;top:50%;left:50%;transform:translate(-50%,-50%);width:min(660px,calc(100vw - 24px));height:min(785px,calc(100dvh - 30px));background:#fffcf8;color:#2c211a;border-radius:21px;box-shadow:0 24px 80px rgba(0,0,0,.32);display:flex;flex-direction:column;overflow:hidden}
+.checkout-review[hidden]{display:none!important}
+.checkout-review-header{display:flex;align-items:start;gap:14px;justify-content:space-between;background:#fff7ec;padding:21px 26px 18px;border-bottom:1px solid #f0dcc8;flex-shrink:0}
+.checkout-review-kicker{color:#bd5623;letter-spacing:.16em;font-size:.64rem;font-weight:950}
+.checkout-review-header h2{font-size:clamp(1.43rem,3.5vw,1.85rem);letter-spacing:-.05em;line-height:1.17;margin:5px 0 6px;color:#2f2018}
+.checkout-review-header h2 span{font-size:.85em}
+.checkout-review-header p{font-size:.79rem;line-height:1.45;color:#86766a;margin:0}
+.checkout-review-close{flex-shrink:0}
+.checkout-review-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:18px 26px 12px}
+.review-progress{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#f7f2eb;border:1px solid #ece3d8;border-radius:11px;padding:10px 12px;font-size:.69rem;font-weight:850;margin-bottom:18px}
+.review-progress-done{color:#667761}
+.review-progress-active{color:#b54d19}
+.review-section{margin-bottom:20px}
+.review-section-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.review-section-heading h3{margin:0;font-size:.98rem;letter-spacing:-.02em;color:#34251d}
+.review-section-heading>span{font-size:.7rem;color:#907e6e;font-weight:700}
+.review-products{border:1px solid #eee3d8;border-radius:13px;overflow:hidden;background:white}
+.review-product{display:flex;align-items:center;gap:12px;padding:12px 13px;border-bottom:1px solid #f2eee9}
+.review-product:last-child{border-bottom:0}
+.review-product-photo{width:60px;height:60px;min-width:60px;background:#ffede0;display:grid;place-items:center;border-radius:10px;overflow:hidden;font-size:1.6rem}
+.review-product-photo img{width:100%;height:100%;object-fit:cover}
+.review-product-info{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
+.review-product-info strong{font-size:.8rem;line-height:1.4;color:#372820}
+.review-product-info small{font-size:.69rem;color:#86796e}
+.review-product-price{font-size:.84rem;font-weight:900;white-space:nowrap;align-self:start;color:#2f2118;padding-top:3px}
+.review-note{margin:2px 0 0!important;color:#ad5b30;font-size:.69rem;line-height:1.45;overflow-wrap:anywhere}
+.review-data-pair{display:grid;grid-template-columns:104px 1fr;gap:13px;align-items:start;border-bottom:1px solid #f0e9e2;padding:9px 0;font-size:.8rem;line-height:1.5}
+.review-data-pair:last-child{border-bottom:none}
+.review-data-pair small{font-size:.73rem;color:#84756a}
+.review-data-pair strong{font-size:.79rem;font-weight:760;color:#33241c;overflow-wrap:anywhere}
+.review-totals{background:#fff2e3;border:1px solid #f1d2b2;border-radius:15px;padding:16px 17px;margin:2px 0 14px;display:grid;gap:12px}
+.review-amount-line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:.78rem;color:#675346}
+.review-amount-line strong{font-size:.91rem;color:#33251c;white-space:nowrap}
+.review-amount-line strong small{font-weight:600;font-size:.62rem;white-space:normal}
+.review-grand-total{border-top:1px solid #e7be95;padding-top:13px;margin-top:1px;color:#372316;font-weight:900}
+.review-grand-total span{font-size:.9rem}
+.review-grand-total strong{color:#b64b19;font-size:1.47rem;letter-spacing:-.04em}
+.review-warning{background:#fff9df;border:1px solid #f3df9a;color:#754f14;border-radius:12px;padding:12px 13px;margin:12px 0}
+.review-warning p{font-size:.74rem;line-height:1.5;margin:0 0 6px}
+.review-warning p:last-child{margin-bottom:0}
+.review-terms{font-size:.72rem;line-height:1.6;color:#847970;margin:11px 0 13px}
+.checkout-review-actions{flex-shrink:0;border-top:1px solid #eadfd2;background:#fff;padding:15px 26px 17px;display:grid;grid-template-columns:minmax(145px,.8fr) minmax(240px,1.3fr);gap:10px}
+.checkout-review-actions button{min-height:47px;border-radius:11px;font-weight:850;cursor:pointer}
+.checkout-back{background:#fff;border:1px solid #d7cabb;color:#5a4538;font-size:.79rem;padding:10px}
+.checkout-back:hover{background:#f8f0e6}
+.checkout-send{display:flex;align-items:center;justify-content:center;gap:12px;font-size:.79rem;padding:10px 12px}
+.checkout-review-actions>p{grid-column:1/-1;text-align:center;margin:0;color:#95887e;font-size:.67rem;line-height:1.5}
+@media(max-width:600px){
+  .checkout-review{width:calc(100vw - 12px);height:calc(100dvh - 12px);max-height:820px;border-radius:16px}
+  .checkout-review-header{padding:16px 16px 14px}
+  .checkout-review-header p{font-size:.74rem}
+  .checkout-review-scroll{padding:13px 15px 5px}
+  .review-progress{font-size:.61rem;padding:9px}
+  .review-product{gap:9px;padding:10px 8px}
+  .review-product-photo{width:50px;height:50px;min-width:50px}
+  .review-product-price{font-size:.73rem}
+  .review-data-pair{grid-template-columns:72px 1fr;gap:8px}
+  .review-data-pair strong{font-size:.75rem}
+  .checkout-review-actions{padding:11px 12px 15px;grid-template-columns:1fr 1.5fr;gap:7px}
+  .checkout-review-actions button{min-height:48px;font-size:.7rem}
+  .checkout-review-actions>p{font-size:.62rem}
+  .review-grand-total strong{font-size:1.36rem}
+}
+@media(prefers-reduced-motion:reduce){.checkout-review *{scroll-behavior:auto}}

@@ -208,7 +208,7 @@
       <div class="summary-row"><span>${s.pending?'Parcial dos sabores com preço':s.customized?'Subtotal base estimado':'Subtotal'}</span><strong>${s.pending&&!s.subtotal?'A confirmar':money(s.subtotal)}</strong></div>
       <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete pelo CEP (estimado)':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':validPrice(s.fee)?money(s.fee):'A calcular'}</strong></div>
       <div class="summary-row summary-total"><span>Total estimado</span><strong data-order-total>${s.total===null?'A confirmar':money(s.total)}</strong></div>
-      <div class="cart-pending" data-delivery-pending>${shipping.status==='ready'?'Frete calculado pela rota. Preços das pizzas e alterações ainda precisam de confirmação.':'O frete será calculado pela rota das ruas antes do envio do pedido.'}</div>`:'';
+      <div class="cart-pending" data-delivery-pending>${shipping.status==='ready'?'Frete estimado pelo CEP. Valores sujeitos à conferência do endereço e alterações de ingredientes.':'Informe o CEP para consultar o frete automático.'}</div>`:'';
     const fields=cart.length?`<form class="order-form" onsubmit="return false">
       <label for="{prefix}-name">Seu nome <span class="required-mark">*</span></label>
       <input id="{prefix}-name" data-field="name" autocomplete="name" maxlength="70" placeholder="Como podemos chamar você?" value="${esc(form.name)}" required>
@@ -236,8 +236,9 @@
     return `<div class="cart-sticky"><div class="cart-title-row"><h3 class="desktop-cart-title">${cartIcon} Meu carrinho</h3><span class="cart-count">${s.count} ${s.count===1?'item':'itens'}</span></div>
       ${items}${summary}${fields}
       ${cart.length?'<button class="clear-cart" data-clear type="button">Limpar pedido</button>':''}
-      <button class="button button-hot full-button" type="button" data-checkout ${cart.length?'':'disabled'}>Enviar para confirmar no WhatsApp <span>↗</span></button>
-      <p class="cart-disclaimer">* O envio abre o WhatsApp e não conclui a compra. Preços, prazo, entrega e disponibilidade precisam ser confirmados pela pizzaria.</p></div>`;
+      ${cart.length?'<p class="checkout-step-hint"><span>1</span> Confira os dados de entrega antes de continuar</p>':''}
+      <button class="button button-hot full-button checkout-review-button" type="button" data-checkout ${cart.length?'':'disabled'}>Revisar pedido <span>→</span></button>
+      <p class="cart-disclaimer">Na próxima etapa você confere os valores e só então abre o WhatsApp. O pedido depende da confirmação da pizzaria.</p></div>`;
   }
   function renderCart() {
     const stats = totals();
@@ -300,40 +301,107 @@
     const root = mobile ? $('cart-mobile') : $('cart-desktop');
     root.querySelector(`[data-field="${key}"]`)?.focus();
   }
-  function checkout() {
-    if (!cart.length) return toast('Adicione uma pizza primeiro.');
-    if (form.name.trim().length<2) { toast('Informe seu nome para continuar.'); focusMissing('name'); return; }
-    if(cepDigits().length!==8){toast('Informe o CEP para calcular o frete.');focusMissing('cep');return;}
+  let checkoutFromDrawer=false;
+  // O preço de revisão é apenas referência quando existe personalização.
+  function reviewHTML(){
+    const stats=totals();
+    const baseTotal=!stats.pending&&validPrice(stats.fee)
+      ? Math.round((stats.subtotal+stats.fee)*100)/100 : null;
+    const hasChanges=stats.customized;
+    const list=cart.map(item=>{
+      const p=itemPrice(item);
+      const photo=item.type==='half' ? byId(item.a)?.image : byId(item.id)?.image;
+      const lineTotal=validPrice(p)?money(Math.round(p*item.qty*100)/100):'A confirmar';
+      return `<div class="review-product">
+        <div class="review-product-photo">${photo?`<img src="${esc(photo)}" alt="" loading="lazy">`:'🍕'}</div>
+        <div class="review-product-info">
+          <strong>${esc(formatName(item))}</strong>
+          <small>${item.qty} ${item.qty===1?'unidade':'unidades'}${item.type==='half'?' · Meio a meio':''}</small>
+          ${item.note?`<p class="review-note">✎ ${esc(item.note)}</p>`:''}
+        </div>
+        <div class="review-product-price">${lineTotal}</div>
+      </div>`;
+    }).join('');
+    const address=[form.address,'nº '+form.numero.trim(),form.complemento.trim(), 'CEP '+form.cep.trim()].filter(Boolean).join(' · ');
+    const feeLabel=shipping.status==='ready'&&validPrice(stats.fee)
+      ? money(stats.fee)+' <small>(estimado pelo CEP)</small>' : 'A confirmar no WhatsApp';
+    const warnings=[
+      hasChanges?'As alterações de ingredientes podem gerar acréscimos. O valor exibido é o preço base.':'',
+      stats.pending?'Algumas pizzas estão com preço pendente de confirmação.':'',
+      shipping.status!=='ready'?'Não foi possível calcular o frete agora. A pizzaria confirmará o valor antes de aceitar o pedido.':''
+    ].filter(Boolean);
+    return `<div class="review-progress"><span class="review-progress-done">1. Dados preenchidos ✓</span><span class="review-progress-active">2. Conferência final</span></div>
+      <section class="review-section" aria-label="Pizzas escolhidas">
+        <div class="review-section-heading"><h3>🍕 Suas pizzas</h3><span>${stats.count} ${stats.count===1?'item':'itens'}</span></div>
+        <div class="review-products">${list}</div>
+      </section>
+      <section class="review-section" aria-label="Informações de entrega">
+        <div class="review-section-heading"><h3>📍 Entrega</h3><span>Confira o endereço</span></div>
+        <div class="review-data-pair"><small>Nome</small><strong>${esc(form.name.trim())}</strong></div>
+        <div class="review-data-pair"><small>Endereço</small><strong>${esc(address)}</strong></div>
+        <div class="review-data-pair"><small>Pagamento</small><strong>${esc(form.payment)}</strong></div>
+        ${form.notes.trim()?`<div class="review-data-pair"><small>Observações</small><strong>${esc(form.notes.trim())}</strong></div>`:''}
+      </section>
+      <section class="review-totals" aria-label="Resumo dos valores">
+        <div class="review-amount-line"><span>Subtotal das pizzas</span><strong>${stats.pending?'A confirmar':money(stats.subtotal)}</strong></div>
+        <div class="review-amount-line"><span>Frete</span><strong>${feeLabel}</strong></div>
+        <div class="review-amount-line review-grand-total">
+          <span>${hasChanges?'Total base estimado':'Total estimado'}</span>
+          <strong>${baseTotal===null?'A confirmar':money(baseTotal)}</strong>
+        </div>
+      </section>
+      ${warnings.length?`<div class="review-warning" role="note">${warnings.map(w=>`<p>⚠ ${esc(w)}</p>`).join('')}</div>`:''}
+      <p class="review-terms">O frete é estimado pela rua do CEP. Enviar pelo WhatsApp não confirma a compra: a pizzaria verificará disponibilidade, valor final e prazo.</p>`;
+  }
+  function openCheckoutReview(){
+    checkoutFromDrawer=!$('cart-drawer').hidden;
+    $('checkout-review-content').innerHTML=reviewHTML();
+    openDialog('checkout-review');
+    $('checkout-confirm')?.focus();
+  }
+  function returnToCart(){
+    if(checkoutFromDrawer)openDialog('cart-drawer');
+    else closeDialogs();
+  }
+  function checkout(){
+    if(!cart.length)return toast('Adicione uma pizza primeiro.');
+    if(form.name.trim().length<2){toast('Informe seu nome.');focusMissing('name');return;}
+    if(cepDigits().length!==8){toast('Informe um CEP válido.');focusMissing('cep');return;}
     if(!validNumber()){toast('Informe o número da residência.');focusMissing('numero');return;}
-    if(!form.address||!shipping.address){toast('Aguarde a consulta do CEP.');focusMissing('cep');return;}
+    if(!shipping.address||!form.address.trim()){toast('Aguarde a consulta do CEP.');focusMissing('cep');return;}
+    if(shipping.status==='outside'){toast('CEP fora da área estimada de entrega. Consulte a pizzaria.');focusMissing('cep');return;}
+    if(shipping.status!=='ready' && shipping.status!=='error'){toast('Aguarde o cálculo do frete.');focusMissing('cep');return;}
+    openCheckoutReview();
+  }
+  function sendOrderWhatsApp(){
+    if($('checkout-review').hidden)return;
+    if(!cart.length)return closeDialogs();
     const s=totals();
-    if(shipping.status==='outside'){
-      toast('Esse CEP está fora da área estimada de entrega. Consulte a pizzaria.');
-      focusMissing('cep');return;
-    }
-    if(shipping.status!=='ready' && shipping.status!=='error'){
-      toast('Aguarde o cálculo automático do frete pelo CEP.');
-      focusMissing('cep');return;
-    }
-    const when = new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date());
-    const lines = [
+    const when=new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date());
+    const baseTotal=!s.pending&&validPrice(s.fee)?Math.round((s.subtotal+s.fee)*100)/100:null;
+    const lines=[
       `🍕 *CONSULTA DE PEDIDO — ${cfg.business.name.toUpperCase()}*`,
       `Enviado em: ${when}`,'',
-      ...cart.flatMap(i => [`${i.qty}x ${formatName(i)} — ${validPrice(itemPrice(i)) ? money(itemPrice(i)*i.qty) + (i.note?' (preço base; alterações a confirmar)':'') : 'preço a confirmar'}`, ...(i.note?[`   ✎ Observação desta pizza: ${i.note}`]:[])]),
-      '', `Subtotal base: ${s.pending?'a confirmar':money(s.subtotal)}`,
+      ...cart.flatMap(i=>[
+        `${i.qty}x ${formatName(i)} — ${validPrice(itemPrice(i))?money(Math.round(itemPrice(i)*i.qty*100)/100)+(i.note?' (preço base)':''):'preço a confirmar'}`,
+        ...(i.note?[`   ✎ Observação: ${i.note}`]:[])
+      ]),
+      '',
+      `Subtotal: ${s.pending?'a confirmar':money(s.subtotal)}`,
       `Distância de referência do CEP: ${validPrice(s.km)?displayKm(s.km)+' km':'a confirmar'}`,
       `Frete estimado pelo CEP: ${validPrice(s.fee)?money(s.fee):'a confirmar pela pizzaria'}`,
-      `Total: ${s.total===null?'a confirmar':money(s.total)}`,'',
+      `Total ${s.customized?'base estimado':'estimado'}: ${baseTotal===null?'a confirmar':money(baseTotal)}`,'',
       `*Cliente:* ${form.name.trim()}`,
       `*Endereço:* ${form.address}, nº ${form.numero.trim()}${form.complemento.trim()?', '+form.complemento.trim():''} · CEP ${form.cep.trim()}`,
       `*Pagamento:* ${form.payment}`,
       `*Observações gerais:* ${form.notes.trim()||'Nenhuma'}`,'',
-      '_🍕 A Doppio Pizzas confirmará os valores, o frete, a disponibilidade e as alterações de ingredientes antes de finalizar o pedido._'
+      '_A Doppio Pizzas confirmará frete, valor final, prazo, disponibilidade e alterações antes de aceitar o pedido._'
     ];
-    window.open(whatsapp(lines.join('\n')), '_blank', 'noopener,noreferrer');
+    window.open(whatsapp(lines.join('\n')),'_blank','noopener,noreferrer');
+    closeDialogs();
   }
   function closeDialogs() {
-    ['overlay','cart-drawer','half-modal','customize-modal'].forEach(id => {
+    ['overlay','cart-drawer','half-modal','customize-modal','checkout-review'].forEach(id => {
       $(id).hidden = true;
       if ($(id).hasAttribute('aria-hidden')) $(id).setAttribute('aria-hidden','true');
     });
@@ -342,7 +410,7 @@
   }
   function openDialog(id) {
     if (!document.body.classList.contains('modal-open')) activeTrigger = document.activeElement;
-    ['cart-drawer','half-modal'].forEach(x=>{$(x).hidden=true; $(x).setAttribute('aria-hidden','true');});
+    ['cart-drawer','half-modal','checkout-review'].forEach(x=>{$(x).hidden=true; $(x).setAttribute('aria-hidden','true');});
     $('overlay').hidden=false; $(id).hidden=false; $(id).setAttribute('aria-hidden','false');
     document.body.classList.add('modal-open'); $(id).querySelector('button')?.focus();
   }
@@ -399,6 +467,9 @@
   $('close-drawer').addEventListener('click',closeDialogs);
   $('close-half').addEventListener('click',closeDialogs);
   $('close-customize').addEventListener('click',closeDialogs);
+  $('close-checkout-review').addEventListener('click',closeDialogs);
+  $('checkout-edit').addEventListener('click',returnToCart);
+  $('checkout-confirm').addEventListener('click',sendOrderWhatsApp);
   $('save-customize').addEventListener('click',saveCustomization);
   $('customize-notes').addEventListener('input',()=>{$('customize-length').textContent=`${$('customize-notes').value.length}/180`;});
   $('overlay').addEventListener('click',closeDialogs);

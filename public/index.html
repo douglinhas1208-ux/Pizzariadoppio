@@ -90,6 +90,23 @@
     <p class="customize-warning">As trocas e ingredientes extras são solicitações. A pizzaria confirma disponibilidade e eventuais acréscimos pelo WhatsApp antes de aceitar o pedido.</p>
     <button id="save-customize" type="button" class="button button-hot full-button">Adicionar ao pedido <svg class="icon-cart" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.4 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/></svg></button>
   </div>
+  <!-- Etapa final: conferir valores e dados antes de abrir o WhatsApp. -->
+  <section class="checkout-review" id="checkout-review" role="dialog" aria-modal="true" aria-labelledby="checkout-review-title" aria-describedby="checkout-review-subtitle" aria-hidden="true" hidden>
+    <div class="checkout-review-header">
+      <div>
+        <span class="checkout-review-kicker">QUASE LÁ · ÚLTIMA ETAPA</span>
+        <h2 id="checkout-review-title">Confira seu pedido <span aria-hidden="true">🍕</span></h2>
+        <p id="checkout-review-subtitle">Veja se está tudo certo antes de continuar para o WhatsApp.</p>
+      </div>
+      <button type="button" id="close-checkout-review" class="close-icon checkout-review-close" aria-label="Fechar revisão do pedido">×</button>
+    </div>
+    <div class="checkout-review-scroll" id="checkout-review-content"></div>
+    <div class="checkout-review-actions">
+      <button type="button" id="checkout-edit" class="checkout-back">← Voltar e editar</button>
+      <button type="button" id="checkout-confirm" class="button button-hot checkout-send">Abrir WhatsApp para enviar <span aria-hidden="true">↗</span></button>
+      <p>Você ainda precisará enviar a mensagem no WhatsApp. Sem pagamento nesta etapa.</p>
+    </div>
+  </section>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
