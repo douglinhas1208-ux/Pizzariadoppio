@@ -5,6 +5,15 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
-  }
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DOPPIO_DB",
+      "database_name": "doppio-admin",
+      "database_id": "ecc62d72-0d68-49a4-8f38-94edbc20d971"
+    }
+  ]
 }
