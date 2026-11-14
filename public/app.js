@@ -10,6 +10,7 @@
   const validPrice = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
   const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const products = cfg.products.filter(p => p && typeof p.id === 'string' && p.available !== false);
+  const acceptingOrders = cfg.business?.acceptingOrders !== false;
   const byId = id => products.find(p => p.id === id);
   const formatPrice = n => validPrice(n) ? money(n) : 'A confirmar';
   // Preço de destaque: reais maiores e centavos em posição elevada, sem descontos fictícios.
@@ -105,7 +106,7 @@
       <div class="pizza-image"><img src="${esc(p.image)}" alt="Pizza de ${esc(p.name)}" loading="lazy" decoding="async" width="560" height="390"><span class="pizza-tag">${esc(p.tag||p.category||'Sabor')}</span></div>
       <div class="pizza-body"><span class="pizza-category">${esc(p.category||'Outros')}</span><h3>${esc(p.name)}</h3>
       <p class="pizza-ingredients-line" aria-label="Ingredientes: ${esc(Array.isArray(p.ingredients)?p.ingredients.join(', '):p.description)}">${Array.isArray(p.ingredients)&&p.ingredients.length?p.ingredients.map(esc).join(' · '):esc(p.description)}</p>
-      <div class="pizza-bottom">${priceMarkup(p.price)}<button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="Adicionar ${esc(p.name)} ao carrinho">${cartIcon} Adicionar</button></div><button type="button" class="customize-link" data-customize="${esc(p.id)}">✎ Personalizar / trocar ingrediente</button></div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
+      <div class="pizza-bottom">${priceMarkup(p.price)}<button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="Adicionar ${esc(p.name)} ao carrinho" ${acceptingOrders?'':'disabled title="Pedidos temporariamente pausados"'}>${cartIcon} Adicionar</button></div><button type="button" class="customize-link" data-customize="${esc(p.id)}">✎ Personalizar / trocar ingrediente</button></div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
     document.querySelector('.menu-count span').textContent = String(products.length + (halfEnabled ? 1 : 0)).padStart(2,'0');
     renderFilters();
   }
@@ -237,7 +238,7 @@
       ${items}${summary}${fields}
       ${cart.length?'<button class="clear-cart" data-clear type="button">Limpar pedido</button>':''}
       ${cart.length?'<p class="checkout-step-hint"><span>1</span> Confira os dados de entrega antes de continuar</p>':''}
-      <button class="button button-hot full-button checkout-review-button" type="button" data-checkout ${cart.length?'':'disabled'}>Revisar pedido <span>→</span></button>
+      <button class="button button-hot full-button checkout-review-button" type="button" data-checkout ${(cart.length&&acceptingOrders)?'':'disabled'}>${acceptingOrders?'Revisar pedido':'Pedidos temporariamente pausados'} <span>→</span></button>
       <p class="cart-disclaimer">Na próxima etapa você confere os valores e só então abre o WhatsApp. O pedido depende da confirmação da pizzaria.</p></div>`;
   }
   function renderCart() {
@@ -252,6 +253,7 @@
   function add(item) {
     const normalized=normalizeItem({...item,qty:1});
     if (!normalized) return;
+    if(!acceptingOrders){toast('A pizzaria está com os pedidos pausados neste momento.');return;}
     const found = cart.find(c => c.key === normalized.key);
     if (found) found.qty = Math.min(99,found.qty+1);
     else cart.push(normalized);
@@ -364,6 +366,7 @@
     else closeDialogs();
   }
   function checkout(){
+    if(!acceptingOrders)return toast('A pizzaria está com os pedidos pausados neste momento.');
     if(!cart.length)return toast('Adicione uma pizza primeiro.');
     if(form.name.trim().length<2){toast('Informe seu nome.');focusMissing('name');return;}
     if(cepDigits().length!==8){toast('Informe um CEP válido.');focusMissing('cep');return;}
@@ -374,6 +377,7 @@
     openCheckoutReview();
   }
   function sendOrderWhatsApp(){
+    if(!acceptingOrders)return toast('A pizzaria não está recebendo pedidos neste momento.');
     if($('checkout-review').hidden)return;
     if(!cart.length)return closeDialogs();
     const s=totals();
@@ -510,7 +514,8 @@
   $('draft-note').hidden=!cfg.business.draft;
   if (cfg.options?.halfHalfEnabled===false || products.length<2) $('meio-a-meio').hidden=true;
   const allPricesReady=products.every(p=>validPrice(p.price));
-  $('menu-note').textContent=allPricesReady?'Preços definidos · frete estimado pelo CEP':'Preços das pizzas a confirmar · frete automático pelo CEP';
+  $('menu-note').textContent=!acceptingOrders?'Pedidos temporariamente pausados':allPricesReady?'Preços definidos · frete estimado pelo CEP':'Preços das pizzas a confirmar · frete automático pelo CEP';
+  if(!acceptingOrders){const notice=document.createElement('p');notice.className='store-paused-banner';notice.setAttribute('role','status');notice.textContent='🍕 Estamos com os pedidos temporariamente pausados. Você pode consultar os sabores e voltar mais tarde para fazer seu pedido.';document.querySelector('.menu-toolbar').after(notice);}
   if(allPricesReady&&cfg.business.draft)$('draft-note').textContent='Cardápio em preparação · Frete estimado pelo CEP e pedidos sujeitos à confirmação pelo WhatsApp.';
   renderProducts(); renderCart();
 })();

@@ -283,3 +283,17 @@ body.doppio-map-open{overflow:hidden}
   .review-grand-total strong{font-size:1.36rem}
 }
 @media(prefers-reduced-motion:reduce){.checkout-review *{scroll-behavior:auto}}
+
+/* Administração gratuita: aviso quando os pedidos forem pausados */
+.store-paused-banner{
+  padding:15px 19px;
+  background:#fff3e9;
+  border:1px solid #e9b68d;
+  color:#95481f;
+  border-radius:12px;
+  font-weight:800;
+  font-size:.82rem;
+  line-height:1.5;
+  margin:3px 0 20px;
+}
+.pizza-card .add-button:disabled{cursor:not-allowed;background:#a7a09a;box-shadow:none;opacity:.76}

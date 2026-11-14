@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#211b16">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/admin.css">
+  <script src="/admin.js" defer></script>
+  <title>Painel administrativo | Doppio Pizzas</title>
+</head>
+<body>
+  <header class="admin-top">
+    <div class="admin-container admin-top-inner">
+      <div class="admin-brand"><span class="admin-logo">D<span>•</span></span><div><strong>DOPPIO <em>ADMIN</em></strong><small>PAINEL DA PIZZARIA</small></div></div>
+      <a href="/" class="admin-visit" target="_blank" rel="noopener noreferrer">Ver cardápio <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+  <main class="admin-container">
+    <div class="admin-heading">
+      <div><span class="section-eyebrow">PAINEL DE CONTROLE</span><h1>Seu negócio, <em>suas regras.</em></h1><p>Gerencie preços, pizzas e funcionamento em um único lugar.</p></div>
+      <span class="admin-state-pill" id="connection-state" role="status">Verificando conexão...</span>
+    </div>
+
+    <section class="auth-card" id="admin-loading" aria-live="polite">
+      <span class="loading-dot"></span><h2>Preparando o painel</h2><p>Verificando o acesso protegido...</p>
+    </section>
+
+    <section class="auth-card" id="admin-setup" hidden>
+      <div class="auth-icon">🔒</div>
+      <h2>Falta apenas ativar o painel</h2>
+      <p>A estrutura foi instalada, mas as alterações ficam bloqueadas até conectar o banco D1 e definir os segredos de acesso no Cloudflare. O cardápio público continua funcionando normalmente.</p>
+      <div class="setup-steps">
+        <p><strong>1.</strong> Crie um banco D1 gratuito chamado <code>doppio-admin</code> no Cloudflare.</p>
+        <p><strong>2.</strong> Vincule o banco ao Worker <code>cardapio</code> com o nome de binding <code>DOPPIO_DB</code>.</p>
+        <p><strong>3.</strong> Configure dois segredos no Worker: <code>ADMIN_PASSWORD</code> (mínimo de 16 caracteres) e <code>ADMIN_SESSION_SECRET</code> (mínimo de 32 caracteres aleatórios).</p>
+        <p><strong>4.</strong> Inclua a vinculação D1 no <code>wrangler.jsonc</code> com o ID do banco para preservá-la nas próximas publicações.</p>
+      </div>
+      <p class="setup-safe">Por segurança, nunca coloque a senha ou o segredo no GitHub ou nesta conversa.</p>
+      <button type="button" id="setup-refresh" class="admin-button admin-button-primary">Verificar novamente <span>↻</span></button>
+    </section>
+
+    <section class="auth-card auth-login" id="admin-login" hidden>
+      <div class="auth-icon">🔐</div>
+      <h2>Entrar no Doppio Admin</h2>
+      <p>Use a senha administrativa definida nos segredos do Cloudflare.</p>
+      <form id="login-form">
+        <label for="admin-password">Senha administrativa</label>
+        <input id="admin-password" name="password" type="password" autocomplete="current-password" minlength="16" maxlength="256" placeholder="Sua senha de acesso" required>
+        <button class="admin-button admin-button-primary" id="login-button" type="submit">Entrar no painel <span>→</span></button>
+      </form>
+      <p class="admin-error" id="login-error" role="alert" hidden></p>
+      <small>Conexão protegida por sessão segura. Não compartilhe sua senha.</small>
+    </section>
+
+    <section id="admin-dashboard" hidden>
+      <div class="dashboard-toolbar">
+        <div><h2>Visão geral</h2><p>As alterações entram no cardápio quando você clicar em salvar.</p></div>
+        <button type="button" class="admin-button admin-button-muted" id="logout">Sair da conta <span>↗</span></button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><span class="stat-symbol">🍕</span><small>Sabores cadastrados</small><strong id="stat-products">4</strong></div>
+        <div class="stat-card"><span class="stat-symbol">✓</span><small>Sabores disponíveis</small><strong id="stat-available">4</strong></div>
+        <div class="stat-card"><span class="stat-symbol">R$</span><small>Menor preço</small><strong id="stat-min">R$ 49,99</strong></div>
+      </div>
+
+      <section class="admin-panel">
+        <div class="panel-head"><div><span class="panel-label">01 · ATENDIMENTO</span><h3>Funcionamento da pizzaria</h3><p>Controle se o checkout aceita novos pedidos.</p></div><span id="order-badge" class="order-badge">Aceitando pedidos</span></div>
+        <label class="toggle-row" for="accepting-orders">
+          <div><strong>Aceitar pedidos pelo cardápio</strong><small>Ao desligar, os sabores continuam visíveis, mas o checkout é pausado.</small></div>
+          <input type="checkbox" role="switch" id="accepting-orders" checked>
+          <span class="toggle-ui" aria-hidden="true"></span>
+        </label>
+        <div class="settings-grid">
+          <label>Dias de funcionamento<input id="opening-days" type="text" maxlength="90" placeholder="Ex.: Sábados e domingos"></label>
+          <label>Horários de funcionamento<input id="opening-hours" type="text" maxlength="60" placeholder="Ex.: 18h às 23h"></label>
+          <label>Previsão de entrega (minutos)<input id="delivery-eta" type="number" min="10" max="240" step="1" inputmode="numeric"></label>
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="panel-head"><div><span class="panel-label">02 · CARDÁPIO</span><h3>Sabores e preços</h3><p>Edite preços, descrição, ingredientes, imagens disponíveis e estoque.</p></div><button type="button" class="admin-button admin-button-primary add-flavor" id="add-product">+ Novo sabor</button></div>
+        <div class="product-manager" id="admin-products" aria-live="polite"></div>
+        <p class="product-hint">Nesta primeira versão, as fotos são selecionadas dentre as imagens já publicadas. O envio de novas fotos será implementado separadamente.</p>
+      </section>
+
+      <div class="save-panel">
+        <div><strong id="save-status">Nenhuma alteração pendente</strong><small id="last-saved">Pronto para editar.</small></div>
+        <button type="button" id="reload-state" class="admin-button admin-button-muted">Recarregar</button>
+        <button type="button" id="save-state" class="admin-button admin-button-primary" disabled>Salvar alterações <span>✓</span></button>
+      </div>
+    </section>
+
+    <p class="admin-footer">Doppio Admin • Configuração gratuita Cloudflare Workers + D1. Acesso exclusivo da pizzaria.</p>
+  </main>
+  <div id="admin-toast" class="admin-toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import {adminApi,publicCatalogScript} from './admin.js';
 /*
  * Doppio Pizzas — cálculo de frete no Cloudflare Worker.
  * Segredo ORS_API_KEY: somente no Cloudflare, jamais no GitHub.
@@ -149,6 +150,23 @@ async function frete(request,env,url) {
 export default {
   async fetch(request,env) {
     const url=new URL(request.url);
+    if(url.pathname==='/admin'||url.pathname==='/admin/'||url.pathname==='/admin.html'){
+      if(request.method!=='GET')return siteError('method','Use GET.',405);
+      const assetUrl=new URL('/admin.html',url.origin);
+      const response=await env.ASSETS.fetch(new Request(assetUrl.toString(),request));
+      const headers=new Headers(response.headers);
+      headers.set('cache-control','no-store');
+      headers.set('x-frame-options','DENY');
+      headers.set('referrer-policy','no-referrer');
+      headers.set('content-security-policy',"default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+      headers.set('x-content-type-options','nosniff');
+      return new Response(response.body,{status:response.status,headers});
+    }
+    if(url.pathname==='/api/public-config.js'){
+      if(request.method!=='GET')return siteError('method','Use GET.',405);
+      return publicCatalogScript(env);
+    }
+    if(url.pathname.startsWith('/api/admin/'))return adminApi(request,env,url);
     if(url.pathname==='/api/status'){
       return json({service:'doppio-frete',configured:Boolean(env.ORS_API_KEY)});
     }
