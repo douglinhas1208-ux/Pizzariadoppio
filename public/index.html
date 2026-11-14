@@ -13,8 +13,10 @@
   <title>Doppio Pizzas • Cardápio Online</title>
   <link rel="preload" href="assets/calabresa.webp" as="image" fetchpriority="high">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="promo.css">
   <script defer src="config.js"></script>
   <script defer src="/api/public-config.js"></script>
+  <script defer src="promo.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -44,6 +46,21 @@
     </section>
 
     <div class="ticker" aria-label="Destaques"><div class="ticker-inner"><span>FOTOS REAIS</span><b>✳</b><span>PEÇA PELO WHATSAPP</span><b>✳</b><span>ENTREGAS ATÉ 10 KM</span><b>✳</b><span>MEIO A MEIO DISPONÍVEL</span><b>✳</b><span>SABORES FEITOS PRA VOCÊ</span><b>✳</b><span>PEÇA PELO WHATSAPP</span></div></div>
+
+    <!-- Banner promocional isolado: desativar em config.js > promotion.twoPizzasSodaBannerEnabled. -->
+    <section class="promo-section" id="promo-duas-pizzas" aria-label="Promoção da Doppio Pizzas" hidden>
+      <div class="container">
+        <div class="promo-card">
+          <div class="promo-photo"><img src="assets/calabresa.webp" width="400" height="300" loading="lazy" decoding="async" alt=""></div>
+          <div class="promo-copy">
+            <span class="promo-label">✦ OFERTA DA DOPPIO</span>
+            <h2>Na compra de <strong>2 pizzas</strong>, ganhe <strong>1 refrigerante grátis!</strong></h2>
+            <p>Escolha seus sabores favoritos. Promoção sujeita à confirmação no atendimento.</p>
+          </div>
+          <div class="promo-action"><span class="promo-drink" aria-hidden="true">🥤</span><a class="button button-hot" href="#cardapio">Escolher pizzas <span aria-hidden="true">↗</span></a></div>
+        </div>
+      </div>
+    </section>
 
     <section class="menu-section" id="cardapio">
       <div class="container">
