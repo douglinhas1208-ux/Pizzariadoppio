@@ -5,8 +5,8 @@
  */
 const ORS = 'https://api.heigit.org';
 const SHOP = 'Rua Firmino Morgado, 60, Jardim Brasília, São Paulo, SP, Brasil';
-// Definir as coordenadas somente após confirmação do ponto exato pela pizzaria.
-const SHOP_COORDS = null;
+// Coordenadas da pizzaria confirmadas por marcador do Google Maps: [longitude, latitude]
+const SHOP_COORDS = [-46.4938778,-23.5532045];
 const MAX_KM = 10;
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status,
@@ -45,16 +45,27 @@ function geocodeInfo(feature,street,number) {
   const fullAddress=p.layer==='address' && sameNumber;
   return {point:coord,quality:fullAddress?'number':'street',label:p.label||'',layer:p.layer||'',housenumber:n,confidence:typeof p.confidence==='number'?p.confidence:null};
 }
-async function geocodeAddress(apiKey,street,number,neighborhood,city,state,cep) {
-  const query=[street+' '+number,neighborhood,city,state,cep,'Brasil'].filter(Boolean).join(', ');
-  const url=new URL(ORS+'/pelias/v1/search');
-  url.searchParams.set('text',query);
-  url.searchParams.set('size','6');
-  url.searchParams.set('boundary.country','BRA');
-  const data=await getJSON(url.toString(),{headers:{Authorization:apiKey}},9500);
-  const matches=(data.features||[]).map(f=>geocodeInfo(f,street,number)).filter(Boolean);
-  matches.sort((a,b)=>(b.quality==='number')-(a.quality==='number') || (b.confidence||0)-(a.confidence||0));
-  return matches[0]||null;
+async function geocodeAddress(apiKey,street,number,neighborhood,city,state) {
+  const queries=[
+    [street+' '+number,neighborhood,city,state,'Brasil'].filter(Boolean).join(', '),
+    [street,neighborhood,city,state,'Brasil'].filter(Boolean).join(', '),
+    [street,city,state,'Brasil'].filter(Boolean).join(', ')
+  ];
+  const matches=[];
+  for(const text of queries){
+    const url=new URL(ORS+'/pelias/v1/search');
+    url.searchParams.set('text',text);
+    url.searchParams.set('size','8');
+    url.searchParams.set('boundary.country','BRA');
+    url.searchParams.set('focus.point.lat',String(SHOP_COORDS[1]));
+    url.searchParams.set('focus.point.lon',String(SHOP_COORDS[0]));
+    const data=await getJSON(url.toString(),{headers:{Authorization:apiKey}},9500);
+    matches.push(...(data.features||[]).map(f=>geocodeInfo(f,street,number)).filter(Boolean));
+    if(matches.some(m=>m.quality==='number'))break;
+  }
+  const nearby=matches.filter(x=>haversine(SHOP_COORDS,x.point)<25);
+  nearby.sort((a,b)=>(b.quality==='number')-(a.quality==='number') || (b.confidence||0)-(a.confidence||0));
+  return nearby[0]||null;
 }
 function haversine(a,b) {
   const toRad=x=>x*Math.PI/180;
@@ -107,17 +118,20 @@ async function frete(request,env,url) {
     const originPoint=SHOP_COORDS;
     if(!validCoord(originPoint))return siteError('origin_setup','Confirme o ponto exato de saída da pizzaria para ativar frete automático.',503);
     stage='destination';
-    const candidate=await geocodeAddress(env.ORS_API_KEY,address.street,number,address.neighborhood,address.city,address.state,cep);
-    if(!candidate)return siteError('destination_not_found','Não conseguimos localizar a rua com segurança. Confira o CEP e procure a pizzaria.',422,{address});
-    if(candidate.quality!=='number' && !pin){
-      return siteError('confirm_pin','A rua foi localizada, mas o número não foi identificado no mapa. Marque a entrada da residência para calcular corretamente.',409,{
-        address,near:{lon:candidate.point[0],lat:candidate.point[1]},label:candidate.label
-      });
-    }
-    let destination=candidate.point;
+    let destination,precision='pin_confirmado';
     if(pin){
-      if(haversine(candidate.point,pin)>1.5)return siteError('pin_too_far','O ponto marcado está distante da rua informada. Confira o CEP.',422);
+      if(haversine(originPoint,pin)>MAX_KM+4)return siteError('outside_area','Ponto fora da região de entrega.',422,{address});
       destination=pin;
+    }else{
+      const candidate=await geocodeAddress(env.ORS_API_KEY,address.street,number,address.neighborhood,address.city,address.state);
+      if(!candidate || candidate.quality!=='number'){
+        return siteError('confirm_pin','Número não localizado com precisão. Confirme o ponto de entrega no mapa.',409,{
+          address,near:candidate?{lon:candidate.point[0],lat:candidate.point[1]}:{lon:SHOP_COORDS[0],lat:SHOP_COORDS[1]},
+          label:candidate?.label||address.street
+        });
+      }
+      destination=candidate.point;
+      precision='numero_localizado';
     }
     if(haversine(originPoint,destination)>MAX_KM+2){
       return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address});
@@ -127,7 +141,7 @@ async function frete(request,env,url) {
     const km=meters/1000;
     if(km>MAX_KM+1e-6)return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address,distanceKm:Math.round(km*100)/100});
     const fee=5+Math.max(0,Math.ceil(km-5-1e-9));
-    return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision:pin?'pin_confirmado':'numero_localizado',origin:'Rua Firmino Morgado, 60',routeMode:'driving-car'});
+    return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision,origin:'Rua Firmino Morgado, 60',routeMode:'driving-car'});
   } catch(e) {
     if(e.status===403 || e.status===401)return siteError('provider_access','O serviço de rotas recusou a chave. Confira o plano e a ativação da API.',503);
     return siteError('provider_unavailable_'+stage,'Não foi possível consultar o serviço de '+stage+' agora.',503,{upstreamStatus:typeof e.status==='number'?e.status:null});
@@ -138,6 +152,15 @@ export default {
     const url=new URL(request.url);
     if(url.pathname==='/api/status'){
       return json({service:'doppio-frete',configured:Boolean(env.ORS_API_KEY)});
+    }
+    if(url.pathname==='/api/cep'){
+      if(request.method!=='GET')return siteError('method','Use GET.',405);
+      const cep=String(url.searchParams.get('cep')||'').replace(/\D/g,'');
+      if(!/^\d{8}$/.test(cep))return siteError('invalid_cep','Digite um CEP com oito números.');
+      try {
+        const address=await cepLookup(cep);
+        return address?json({ok:true,address}):siteError('cep_not_found','CEP não localizado.',422);
+      }catch(_){return siteError('cep_unavailable','Não foi possível consultar o CEP agora.',503)}
     }
     if(url.pathname==='/api/frete'){
       if(request.method!=='POST')return siteError('method','Use POST.',405);
