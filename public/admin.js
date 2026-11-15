@@ -17,12 +17,19 @@
   let soundEnabled=false,alertAudio=null,alertClearTimer;
   // Reinicia desativado a cada abertura: o navegador exige gesto do usuário para reproduzir som.
   const AudioAPI=window.AudioContext||window.webkitAudioContext;
-  // Alerta de novo pedido: fale a frase em português. Para voltar ao toque antigo,
-  // basta mudar ORDER_SOUND_MODE para 'chime' (ou restaurar o backup GitHub).
-  const ORDER_SOUND_MODE='voice';
-  const ORDER_VOICE_TEXT='Ó, o pedido saindo!';
-  const SpeechAPI=window.speechSynthesis;
-  const SpeechUtteranceAPI=window.SpeechSynthesisUtterance;
+  // Alerta: reprodução da gravação original enviada pela pizzaria (não é voz sintética).
+  // Para reverter somente o som, mudar ORDER_SOUND_MODE para 'chime'.
+  const ORDER_SOUND_MODE='recording';
+  const ORDER_RECORDING_URL='/assets/alerta-pedido-saindo.ogg';
+  let recordedAlertBuffer=null;
+  async function loadRecordedAlert(){
+    if(recordedAlertBuffer)return;
+    if(!alertAudio)throw new Error('Áudio ainda não autorizado.');
+    const response=await fetch(ORDER_RECORDING_URL,{cache:'force-cache'});
+    if(!response.ok)throw new Error('Gravação indisponível.');
+    const bytes=await response.arrayBuffer();
+    recordedAlertBuffer=await alertAudio.decodeAudioData(bytes);
+  }
   function updateSoundButton(){
     $('orders-sound-toggle').textContent=soundEnabled?'🔊 Alerta ativado':'🔕 Ativar alerta';
     $('orders-sound-toggle').setAttribute('aria-pressed',String(soundEnabled));
@@ -46,26 +53,14 @@
   }
   function playNewOrderSound(){
     if(!soundEnabled)return;
-    if(ORDER_SOUND_MODE!=='voice'||!SpeechAPI||!SpeechUtteranceAPI){
-      playOrderChime();
-      return;
+    if(ORDER_SOUND_MODE!=='recording'||!recordedAlertBuffer||!alertAudio||alertAudio.state!=='running'){
+      playOrderChime();return;
     }
     try{
-      // Cancela a fala anterior caso chegue outro lote de pedidos.
-      SpeechAPI.cancel();
-      const utterance=new SpeechUtteranceAPI(ORDER_VOICE_TEXT);
-      utterance.lang='pt-BR';
-      utterance.rate=0.93;
-      utterance.pitch=1.04;
-      utterance.volume=1;
-      const voices=SpeechAPI.getVoices();
-      const preferred=voices.find(v=>/^pt[-_]BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang));
-      if(preferred)utterance.voice=preferred;
-      utterance.onerror=(event)=>{
-        // Falha de síntese? Toca o aviso clássico, exceto após interrupção/desativação.
-        if(soundEnabled&&!['canceled','interrupted'].includes(event.error))playOrderChime();
-      };
-      SpeechAPI.speak(utterance);
+      const voice=alertAudio.createBufferSource();
+      voice.buffer=recordedAlertBuffer;
+      voice.connect(alertAudio.destination);
+      voice.start();
     }catch(_){playOrderChime();}
   }
   function showNewOrderAlert(amount){
@@ -520,13 +515,17 @@
         if(!alertAudio)alertAudio=new AudioAPI();
         await alertAudio.resume();
         if(alertAudio.state!=='running')throw Error('audio bloqueado');
+        let recordingLoaded=false;
+        if(ORDER_SOUND_MODE==='recording'){
+          try{await loadRecordedAlert();recordingLoaded=true;}
+          catch(_){/* Mantém o alarme antigo se a gravação falhar neste navegador. */}
+        }
         soundEnabled=true;
-        playNewOrderSound();
-        toast('Alerta falado ativado: '+ORDER_VOICE_TEXT);
+        playNewOrderSound(); // Testa com um clique do usuário, necessário para liberar o áudio.
+        toast(recordingLoaded?'Sua gravação de voz foi ativada e testada!':'Alerta ativado com toque de reserva; gravação indisponível neste navegador.',!recordingLoaded&&ORDER_SOUND_MODE==='recording');
       }catch(_){soundEnabled=false;toast('Toque novamente para autorizar o áudio no navegador.',true);}
     }else{
       soundEnabled=false;
-      if(SpeechAPI&&SpeechUtteranceAPI)SpeechAPI.cancel();
       toast('Alerta sonoro desativado.');
     }
     updateSoundButton();
