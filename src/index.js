@@ -10,7 +10,7 @@ const ORS = 'https://api.heigit.org';
 const SHOP = 'Rua Firmino Morgado, 60, Jardim Brasília, São Paulo, SP, Brasil';
 // Coordenadas da pizzaria confirmadas por marcador do Google Maps: [longitude, latitude]
 const SHOP_COORDS = [-46.4938778,-23.5532045];
-const MAX_KM = 10;
+const MAX_KM = 5;
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status,
   headers: {'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}
@@ -136,13 +136,13 @@ async function frete(request,env,url) {
     if(!candidate)return siteError('cep_unmapped','A rua desse CEP não foi encontrada no mapa de rotas. Frete a confirmar pela pizzaria.',422,{address});
     const destination=candidate.point;
     if(haversine(originPoint,destination)>MAX_KM+2){
-      return siteError('outside_area','Endereço fora da área de entrega de até 10 km.',422,{address});
+      return siteError('outside_area','Endereço fora da área de entrega de até 5 km.',422,{address});
     }
     stage='route';
     const meters=await route(env.ORS_API_KEY,originPoint,destination);
     const km=meters/1000;
-    if(km>MAX_KM+1e-6)return siteError('outside_area','Distância de referência do CEP acima de 10 km. Consulte a pizzaria se estiver perto do limite.',422,{address,distanceKm:Math.round(km*100)/100});
-    const fee=5+Math.max(0,Math.ceil(km-5-1e-9));
+    if(km>MAX_KM+1e-6)return siteError('outside_area','Distância de referência do CEP acima de 5 km. Consulte a pizzaria se estiver perto do limite.',422,{address,distanceKm:Math.round(km*100)/100});
+    const fee=5; // Taxa fixa para entregas permitidas de até 5 km.
     return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision:'referencia_do_cep',estimated:true,origin:'Rua Firmino Morgado, 60',destination:{lon:destination[0],lat:destination[1]},routeMode:'driving-car'});
   } catch(e) {
     if(e.status===403 || e.status===401)return siteError('provider_access','O serviço de rotas recusou a chave. Confira o plano e a ativação da API.',503);
