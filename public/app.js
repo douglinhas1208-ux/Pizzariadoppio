@@ -63,10 +63,10 @@
     if (Array.isArray(stored)) cart = stored.map(normalizeItem).filter(Boolean).slice(0,40);
   } catch (_) { /* O carrinho funciona mesmo se o armazenamento estiver indisponível. */ }
   const form={name:'',phone:'',cep:'',numero:'',complemento:'',address:'',payment:(cfg.business.paymentMethods||[])[0]||'A combinar',notes:''};
-  const maxKm=Number(cfg.delivery?.radiusKm)||10;
+  const maxKm=Number(cfg.delivery?.radiusKm)||5;
   const baseKm=Number(cfg.delivery?.includedKm)||5;
   const baseFee=Number(cfg.delivery?.minFee)||5;
-  const extraFee=Number(cfg.delivery?.extraKmFee)||1;
+  const extraFee=Number(cfg.delivery?.extraKmFee ?? 0);
   const displayKm=n=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2}).format(n);
   const shipping={status:'idle',address:null,quote:null,message:'',requestId:0};
   let lookupTimer=null, quoteTimer=null;
@@ -226,7 +226,7 @@
         <p class="delivery-address-result" data-delivery-address>${esc(form.address||'O endereço será preenchido após consultar o CEP.')}</p>
         <p class="delivery-estimate ${shipping.status==='outside'||shipping.status==='error'?'delivery-warning':''}" data-delivery-preview aria-live="polite">${esc(shippingPreview())}</p>
         <button type="button" data-calc-frete class="delivery-calc-button">Recalcular frete</button>
-        <p class="delivery-rule">Até ${baseKm} km: ${money(baseFee)} · Depois: +${money(extraFee)} por km iniciado · Máximo: ${maxKm} km.</p>
+        <p class="delivery-rule">Entregas até ${maxKm} km: taxa de ${money(baseFee)}. Fora da área, não realizamos entrega.</p>
         <p class="delivery-hint">A distância é estimada pela rua de referência do CEP e pode variar conforme o número da casa. Não é necessário marcar no mapa.</p>
         <div class="delivery-field-grid">
           <div><label for="{prefix}-numero">Número (para entrega) <span class="required-mark">*</span></label>
@@ -563,7 +563,7 @@
   $('info-location').textContent=area;
   $('info-intro').textContent=`Atendemos a região de ${area}. Confira nossos detalhes antes de pedir.`;
   $('hero-count').textContent=String(products.length).padStart(2,'0');
-  $('hero-radius').textContent=`${cfg.delivery?.radiusKm||15} km`;
+  $('hero-radius').textContent=`${maxKm} km`;
   $('hero-eta').textContent=`~${cfg.business.etaMinutes||40} min`;
   $('menu-description').textContent=cfg.business.draft?`Conheça nossos ${products.length} sabores iniciais${halfEnabled?' e monte uma pizza meio a meio':''}. Em breve, mais novidades.`:`Escolha nossos ${products.length} sabores${halfEnabled?' ou monte uma pizza meio a meio':''}. Envie seu pedido pelo WhatsApp.`;
   $('year').textContent=new Date().getFullYear();
