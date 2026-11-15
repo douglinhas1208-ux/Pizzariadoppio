@@ -114,14 +114,16 @@ function validateOrder(input,shop){
     return {type:item.type,name,qty:item.qty,note,unitCents,itemCents};
   });
   let shippingCents=null,distanceKm=null;
+  // Rejeitar distância acima do limite, mesmo se a requisição for alterada.
+  if(input.distanceKm!==null&&input.distanceKm!==undefined &&
+     (typeof input.distanceKm!=='number'||!Number.isFinite(input.distanceKm)||input.distanceKm<0||input.distanceKm>5.001))
+    throw Error('Entrega disponível somente até 5 km. Recalcule o CEP.');
   if(input.shippingFee!==null&&input.shippingFee!==undefined){
-    if(typeof input.shippingFee!=='number'||!Number.isFinite(input.shippingFee)||input.shippingFee<5||input.shippingFee>10||Math.abs(input.shippingFee*100-cents(input.shippingFee))>1e-5)
+    if(typeof input.shippingFee!=='number'||!Number.isFinite(input.shippingFee)||input.shippingFee!==5)
       throw Error('Frete inválido. Recalcule no carrinho.');
     shippingCents=cents(input.shippingFee);
-    if(typeof input.distanceKm==='number'&&Number.isFinite(input.distanceKm)&&input.distanceKm>=0&&input.distanceKm<=10.01){
+    if(typeof input.distanceKm==='number'){
       distanceKm=Math.round(input.distanceKm*100)/100;
-      const expectedFee=5+Math.max(0,Math.ceil(distanceKm-5-1e-9));
-      if(shippingCents!==expectedFee*100)throw Error('Frete desatualizado. Recalcule o CEP.');
     }
   }
   return {
