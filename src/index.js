@@ -142,8 +142,10 @@ async function frete(request,env,url) {
     const meters=await route(env.ORS_API_KEY,originPoint,destination);
     const km=meters/1000;
     if(km>MAX_KM+1e-6)return siteError('outside_area','Distância de referência do CEP acima de 5 km. Consulte a pizzaria se estiver perto do limite.',422,{address,distanceKm:Math.round(km*100)/100});
-    const fee=5; // Taxa fixa para entregas permitidas de até 5 km.
-    return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:Math.round(km*100)/100,fee,precision:'referencia_do_cep',estimated:true,origin:'Rua Firmino Morgado, 60',destination:{lon:destination[0],lat:destination[1]},routeMode:'driving-car'});
+    // Arredonda a distância para cima ao centésimo de km para não ocultar ultrapassagem de faixa.
+    const billedKm=Math.ceil(km*100-1e-9)/100;
+    const fee=5+Math.max(0,Math.ceil(billedKm-2-1e-9));
+    return json({ok:true,address,distanceMeters:Math.round(meters),distanceKm:billedKm,fee,precision:'referencia_do_cep',estimated:true,origin:'Rua Firmino Morgado, 60',destination:{lon:destination[0],lat:destination[1]},routeMode:'driving-car'});
   } catch(e) {
     if(e.status===403 || e.status===401)return siteError('provider_access','O serviço de rotas recusou a chave. Confira o plano e a ativação da API.',503);
     return siteError('provider_unavailable_'+stage,'Não foi possível consultar o serviço de '+stage+' agora.',503,{upstreamStatus:typeof e.status==='number'?e.status:null});

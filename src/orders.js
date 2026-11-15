@@ -116,15 +116,18 @@ function validateOrder(input,shop){
   let shippingCents=null,distanceKm=null;
   // Rejeitar distância acima do limite, mesmo se a requisição for alterada.
   if(input.distanceKm!==null&&input.distanceKm!==undefined &&
-     (typeof input.distanceKm!=='number'||!Number.isFinite(input.distanceKm)||input.distanceKm<0||input.distanceKm>5.001))
+     (typeof input.distanceKm!=='number'||!Number.isFinite(input.distanceKm)||input.distanceKm<0||input.distanceKm>5))
     throw Error('Entrega disponível somente até 5 km. Recalcule o CEP.');
   if(input.shippingFee!==null&&input.shippingFee!==undefined){
-    if(typeof input.shippingFee!=='number'||!Number.isFinite(input.shippingFee)||input.shippingFee!==5)
+    if(typeof input.shippingFee!=='number'||!Number.isFinite(input.shippingFee)||
+       !Number.isInteger(input.shippingFee)||input.shippingFee<5||input.shippingFee>8)
       throw Error('Frete inválido. Recalcule no carrinho.');
+    if(typeof input.distanceKm!=='number'||!Number.isFinite(input.distanceKm))
+      throw Error('Distância de entrega ausente. Recalcule o CEP.');
+    distanceKm=Math.ceil(input.distanceKm*100-1e-9)/100;
+    const expectedFee=5+Math.max(0,Math.ceil(distanceKm-2-1e-9));
+    if(input.shippingFee!==expectedFee)throw Error('Frete desatualizado. Recalcule o CEP.');
     shippingCents=cents(input.shippingFee);
-    if(typeof input.distanceKm==='number'){
-      distanceKm=Math.round(input.distanceKm*100)/100;
-    }
   }
   return {
     clientKey:input.clientKey.toLowerCase(),customerName:trim(input.name,70),customerPhone:phone,cep:input.cep,
