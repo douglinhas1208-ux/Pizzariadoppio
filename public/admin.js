@@ -17,8 +17,14 @@
   let soundEnabled=false,alertAudio=null,alertClearTimer;
   // Reinicia desativado a cada abertura: o navegador exige gesto do usuário para reproduzir som.
   const AudioAPI=window.AudioContext||window.webkitAudioContext;
+  // Alerta de novo pedido: fale a frase em português. Para voltar ao toque antigo,
+  // basta mudar ORDER_SOUND_MODE para 'chime' (ou restaurar o backup GitHub).
+  const ORDER_SOUND_MODE='voice';
+  const ORDER_VOICE_TEXT='Ó, o pedido saindo!';
+  const SpeechAPI=window.speechSynthesis;
+  const SpeechUtteranceAPI=window.SpeechSynthesisUtterance;
   function updateSoundButton(){
-    $('orders-sound-toggle').textContent=soundEnabled?'🔊 Som ativado':'🔕 Ativar som';
+    $('orders-sound-toggle').textContent=soundEnabled?'🔊 Alerta ativado':'🔕 Ativar alerta';
     $('orders-sound-toggle').setAttribute('aria-pressed',String(soundEnabled));
   }
   function playOrderChime(){
@@ -38,6 +44,30 @@
       }
     }catch(_){/* Navegador sem áudio: manter alerta visual. */}
   }
+  function playNewOrderSound(){
+    if(!soundEnabled)return;
+    if(ORDER_SOUND_MODE!=='voice'||!SpeechAPI||!SpeechUtteranceAPI){
+      playOrderChime();
+      return;
+    }
+    try{
+      // Cancela a fala anterior caso chegue outro lote de pedidos.
+      SpeechAPI.cancel();
+      const utterance=new SpeechUtteranceAPI(ORDER_VOICE_TEXT);
+      utterance.lang='pt-BR';
+      utterance.rate=0.93;
+      utterance.pitch=1.04;
+      utterance.volume=1;
+      const voices=SpeechAPI.getVoices();
+      const preferred=voices.find(v=>/^pt[-_]BR$/i.test(v.lang))||voices.find(v=>/^pt/i.test(v.lang));
+      if(preferred)utterance.voice=preferred;
+      utterance.onerror=(event)=>{
+        // Falha de síntese? Toca o aviso clássico, exceto após interrupção/desativação.
+        if(soundEnabled&&!['canceled','interrupted'].includes(event.error))playOrderChime();
+      };
+      SpeechAPI.speak(utterance);
+    }catch(_){playOrderChime();}
+  }
   function showNewOrderAlert(amount){
     const banner=$('orders-new-alert');
     banner.hidden=false;
@@ -50,7 +80,7 @@
       banner.hidden=true;
       $('orders-panel').classList.remove('has-new-orders');
     },17000);
-    playOrderChime();
+    playNewOrderSound();
   }
 
   const orderNames={novo:'Aguardando confirmação',preparo:'Em preparação',entrega:'Saiu para entrega',concluido:'Concluído',cancelado:'Cancelado'};
@@ -491,10 +521,14 @@
         await alertAudio.resume();
         if(alertAudio.state!=='running')throw Error('audio bloqueado');
         soundEnabled=true;
-        playOrderChime();
-        toast('Alerta sonoro ativado neste navegador.');
+        playNewOrderSound();
+        toast('Alerta falado ativado: '+ORDER_VOICE_TEXT);
       }catch(_){soundEnabled=false;toast('Toque novamente para autorizar o áudio no navegador.',true);}
-    }else{soundEnabled=false;toast('Alerta sonoro desativado.');}
+    }else{
+      soundEnabled=false;
+      if(SpeechAPI&&SpeechUtteranceAPI)SpeechAPI.cancel();
+      toast('Alerta sonoro desativado.');
+    }
     updateSoundButton();
   });
   $('orders-alert-dismiss').addEventListener('click',()=>{
