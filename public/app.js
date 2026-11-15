@@ -226,7 +226,7 @@
         <p class="delivery-address-result" data-delivery-address>${esc(form.address||'O endereço será preenchido após consultar o CEP.')}</p>
         <p class="delivery-estimate ${shipping.status==='outside'||shipping.status==='error'?'delivery-warning':''}" data-delivery-preview aria-live="polite">${esc(shippingPreview())}</p>
         <button type="button" data-calc-frete class="delivery-calc-button">Recalcular frete</button>
-        <p class="delivery-rule">Entregas até ${maxKm} km: taxa de ${money(baseFee)}. Fora da área, não realizamos entrega.</p>
+        <p class="delivery-rule">Até ${baseKm} km: ${money(baseFee)} · Após ${baseKm} km: +${money(extraFee)} por km adicional iniciado · Limite de ${maxKm} km.</p>
         <p class="delivery-hint">A distância é estimada pela rua de referência do CEP e pode variar conforme o número da casa. Não é necessário marcar no mapa.</p>
         <div class="delivery-field-grid">
           <div><label for="{prefix}-numero">Número (para entrega) <span class="required-mark">*</span></label>
