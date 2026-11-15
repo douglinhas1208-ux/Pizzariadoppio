@@ -2,7 +2,7 @@
   DOPPIO PIZZAS — ARQUIVO DE CONFIGURAÇÃO
   Atualize os campos abaixo e publique novamente os arquivos.
   - price: null = preço ainda não definido | 49.90 = R$ 49,90
-  - Frete: R$ 5,00 apenas para entregas até 5 km pela rota de referência do CEP.
+  - Frete: R$ 5,00 até 2 km; +R$ 1,00 por km adicional iniciado, até 5 km.
   - Para incluir um sabor no futuro, copie um objeto dentro de products.
   - Nenhuma configuração é secreta: este arquivo aparece para clientes.
 */
@@ -21,9 +21,9 @@ window.DOPPIO_CONFIG = {
   delivery: {
     radiusKm: 5,
     minFee: 5, // valor mínimo de entrega em reais
-    includedKm: 5, // até 5 km não há acréscimos
-    extraKmFee: 0, // não fazemos entregas além de 5 km
-    feeMessage: 'Entregamos apenas até 5 km: frete R$ 5,00. Frete estimado pela rota de referência da rua do CEP. Número solicitado apenas para a entrega.',
+    includedKm: 2, // os primeiros 2 km custam R$ 5,00
+    extraKmFee: 1, // R$ 1,00 por cada km adicional iniciado após 2 km
+    feeMessage: 'Entregas até 5 km: R$ 5,00 até 2 km; +R$ 1,00 por km adicional iniciado. Frete estimado pela rota de referência da rua do CEP. Número solicitado apenas para a entrega.',
     freeFrom: null // futuro: frete grátis a partir de um valor, quando houver política definida
   },
   options: {
