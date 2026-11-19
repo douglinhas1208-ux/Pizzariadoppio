@@ -100,3 +100,15 @@ Esta é **atualização periódica (quase em tempo real)**, não uma conexão pu
 **Fotos**: o Doppio Admin permite escolher JPG/PNG/WEBP de até 8 MB. O navegador redimensiona e converte para JPEG de no máximo 350 KiB, carregado por uma API administrativa autenticada e guardado no mesmo banco D1. A imagem recebe rota pública /api/photo/<UUID> para o cardápio. Não é necessário criar bucket R2 nem novo secret. Após o envio, é preciso clicar em "Salvar alterações" para associá-la ao sabor na loja pública. As fotos já existentes continuam disponíveis.
 
 **Privacidade e segurança**: pedidos antigos preservados durante migração do D1 (adição dos campos customer_phone e paid_amount_cents). Fotos e relatórios exigem login para edição; fotos usadas no cardápio são publicamente acessíveis. Dados de clientes e recebimentos não são expostos por endpoints públicos. Testes devem empregar exclusivamente dados fictícios e não enviar mensagens a clientes reais.
+
+
+## Preparação para vendas — 19/11/2026
+
+- Site público usa `draft:false` em `public/config.js`, preços de quatro pizzas aprovados (R$ 54,99 e R$ 49,99), meio a meio pela média e entrega de até 5 km (R$ 5 até 2 km, +R$ 1 por km adicional iniciado).
+- Horários ativos são gerenciados pelo banco D1: sexta, sábado e domingo, 18h–23h, fuso America/Sao_Paulo. Fora de horário, o carrinho não recebe novos pedidos; contato genérico pelo WhatsApp permanece.
+- Promoção reversível: duas pizzas no mesmo pedido qualificam-se a um refrigerante grátis. O carrinho, a revisão e o texto preparado para WhatsApp indicam o brinde; a equipe confirma as condições e a entrega.
+- O site apenas **prepara** uma mensagem WhatsApp e registra pré-pedidos. Abrir o link não confirma envio nem aceite. É necessário atender o WhatsApp e conferir o registro no Doppio Admin antes de preparar pizza.
+- Em cada abertura, entrar no painel, conferir horários, disponibilidade, volume de insumos, fotos, preços, promoção e ativar o som no navegador se quiser alerta sonoro; manter a aba do painel aberta.
+- O checkout não processa cartão/Pix no site. Os pagamentos e recebimentos são acertados e registrados manualmente. Nunca solicitar dados completos de cartão nas observações.
+- Testes de checkout podem ser feitos com respostas **simuladas**, sem gravar pedidos reais. Antes do primeiro pedido real, o operador deve conferir o WhatsApp, o recebimento no painel, frete e status de entrega com sua própria operação.
+- O link compartilhado possui metadados Open Graph de foto real, e a página pública de privacidade está em `/privacidade.html`.
