@@ -58,6 +58,7 @@
     return null;
   };
   let cart = [];
+  const promoEligible = () => cfg.promotion?.twoPizzasSodaBannerEnabled === true && cart.reduce((n,item) => n + item.qty, 0) >= 2;
   try {
     const stored = JSON.parse(localStorage.getItem('doppio-cart-v2') || localStorage.getItem('doppio-cart-v1') || '[]');
     if (Array.isArray(stored)) cart = stored.map(normalizeItem).filter(Boolean).slice(0,40);
@@ -213,6 +214,7 @@
       <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete pelo CEP (estimado)':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':validPrice(s.fee)?money(s.fee):'A calcular'}</strong></div>
       <div class="summary-row summary-total"><span>Total estimado</span><strong data-order-total>${s.total===null?'A confirmar':money(s.total)}</strong></div>
       <div class="cart-pending" data-delivery-pending>${shipping.status==='ready'?'Frete estimado pelo CEP. Valores sujeitos à conferência do endereço e alterações de ingredientes.':'Informe o CEP para consultar o frete automático.'}</div>`:'';
+    const promoNotice=promoEligible()?'<p class="cart-pending" role="note">🎁 Promoção ativa: 1 refrigerante grátis na compra de 2 pizzas. Confirme o brinde no WhatsApp.</p>':'';
     const fields=cart.length?`<form class="order-form" onsubmit="return false">
       <label for="{prefix}-name">Seu nome <span class="required-mark">*</span></label>
       <input id="{prefix}-name" data-field="name" autocomplete="name" maxlength="70" placeholder="Como podemos chamar você?" value="${esc(form.name)}" required>
@@ -241,7 +243,7 @@
       <textarea id="{prefix}-notes" data-field="notes" rows="2" maxlength="300" placeholder="Referência do endereço, instruções de entrega...">${esc(form.notes)}</textarea>
     </form>`:'';
     return `<div class="cart-sticky"><div class="cart-title-row"><h3 class="desktop-cart-title">${cartIcon} Meu carrinho</h3><span class="cart-count">${s.count} ${s.count===1?'item':'itens'}</span></div>
-      ${items}${summary}${fields}
+      ${items}${summary}${promoNotice}${fields}
       ${cart.length?'<button class="clear-cart" data-clear type="button">Limpar pedido</button>':''}
       ${cart.length?'<p class="checkout-step-hint"><span>1</span> Confira os dados de entrega antes de continuar</p>':''}
       <button class="button button-hot full-button checkout-review-button" type="button" data-checkout ${(cart.length&&acceptingOrders)?'':'disabled'}>${acceptingOrders?'Revisar pedido':'Pedidos temporariamente pausados'} <span>→</span></button>
@@ -345,6 +347,7 @@
         <div class="review-section-heading"><h3>🍕 Suas pizzas</h3><span>${stats.count} ${stats.count===1?'item':'itens'}</span></div>
         <div class="review-products">${list}</div>
       </section>
+      ${promoEligible()?'<p class="review-terms">🎁 <strong>Brinde da Doppio:</strong> 1 refrigerante grátis pela compra de 2 pizzas. Confirmar no atendimento.</p>':''}
       <section class="review-section" aria-label="Informações de entrega">
         <div class="review-section-heading"><h3>📍 Entrega</h3><span>Confira o endereço</span></div>
         <div class="review-data-pair"><small>Nome</small><strong>${esc(form.name.trim())}</strong></div>
@@ -445,6 +448,7 @@
         ...(i.note?['   ✎ Observação: '+i.note]:[])
       ]),
       '',
+      ...(promoEligible()?['🎁 Promoção Doppio: 1 refrigerante grátis na compra de 2 pizzas. Confirmar brinde no atendimento.','']:[]),
       'Subtotal: '+(stats.pending?'a confirmar':money(stats.subtotal)),
       'Distância de referência do CEP: '+(validPrice(stats.km)?displayKm(stats.km)+' km':'a confirmar'),
       'Frete estimado pelo CEP: '+(validPrice(stats.fee)?money(stats.fee):'a confirmar pela pizzaria'),

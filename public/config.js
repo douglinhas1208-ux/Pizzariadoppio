@@ -12,11 +12,11 @@ window.DOPPIO_CONFIG = {
     whatsapp: '5511959315869',
     neighborhood: 'Jardim Brasília',
     city: 'São Paulo',
-    openDays: 'Sábados e domingos',
-    openHours: null, // exemplo: '18h às 23h'
+    openDays: 'Sexta, sábado e domingo',
+    openHours: '18h às 23h', // horário confirmado para os três dias
     etaMinutes: 40,
     paymentMethods: ['Crédito', 'Débito', 'Pix'],
-    draft: true
+    draft: false
   },
   delivery: {
     radiusKm: 5,
