@@ -112,3 +112,11 @@ Esta é **atualização periódica (quase em tempo real)**, não uma conexão pu
 - O checkout não processa cartão/Pix no site. Os pagamentos e recebimentos são acertados e registrados manualmente. Nunca solicitar dados completos de cartão nas observações.
 - Testes de checkout podem ser feitos com respostas **simuladas**, sem gravar pedidos reais. Antes do primeiro pedido real, o operador deve conferir o WhatsApp, o recebimento no painel, frete e status de entrega com sua própria operação.
 - O link compartilhado possui metadados Open Graph de foto real, e a página pública de privacidade está em `/privacidade.html`.
+
+## Pizzas doces e horário especial — 20/11/2026
+
+- Novos sabores: Chocolate com Morango e Uva Nevada (Ninho com Uva) na categoria **Doces**.
+- Não permitidos no meio a meio (filtro de seleção no navegador, carrinhos antigos, e validação no servidor).
+- Até definir preço no /admin, ambos aparecem com **Preço a confirmar** e botão bloqueado; nunca usar preço fictício. Os desenhos são ilustrações provisórias e devem ser substituídos por fotos reais enviadas pela pizzaria.
+- Migração versionada do D1 acrescenta doces à primeira leitura sem sobrescrever edições existentes; preservar catalogVersion e halfAllowed em salvamentos posteriores.
+- **Somente sexta 20/11/2026**, abertura 19h em vez de 18h, respeitando o fuso São Paulo e o fechamento semanal configurado. Próximas sextas seguem configuração normal do admin.

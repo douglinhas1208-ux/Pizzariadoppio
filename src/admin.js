@@ -9,19 +9,28 @@ import {adminPhotoApi} from './images.js';
 const COOKIE='doppio_admin';
 const SESSION_SECONDS=8*60*60;
 const enc=new TextEncoder();
+const SWEET_PRODUCTS=[
+  {id:'chocolate-morango',name:'Chocolate com Morango',description:'Pizza doce de chocolate com morangos.',ingredients:['Massa','Chocolate','Morango'],category:'Doces',image:'assets/doce-morango.svg',price:null,available:true,tag:'Doce',halfAllowed:false},
+  {id:'uva-nevada',name:'Uva Nevada (Ninho com Uva)',description:'Pizza doce de creme de Ninho com uvas.',ingredients:['Massa','Creme de Ninho','Uva'],category:'Doces',image:'assets/doce-uva.svg',price:null,available:true,tag:'Doce',halfAllowed:false}
+];
+const CATALOG_VERSION=2;
+const SWEET_IDS=new Set(SWEET_PRODUCTS.map(p=>p.id));
+const eligibleHalf=p=>p && p.halfAllowed!==false && p.category.toLocaleLowerCase('pt-BR')!=='doces' && !SWEET_IDS.has(p.id);
 const DEFAULT_STATE={
   revision:0,
+  catalogVersion:CATALOG_VERSION,
   acceptingOrders:true,
   scheduleEnabled:false,
   weeklyHours:Array.from({length:7},()=>({enabled:false,start:'',end:''})),
-  openDays:'Sábados e domingos',
-  openHours:'',
+  openDays:'Sexta, sábado e domingo',
+  openHours:'18h às 23h',
   etaMinutes:40,
   products:[
     {id:'frango',name:'Frango com Catupiry',description:'Frango e Catupiry.',ingredients:['Massa','Molho de tomate','Frango','Catupiry','Azeitonas'],category:'Clássicas',image:'assets/frango-real.avif',price:54.99,available:true,tag:'Clássica'},
     {id:'brocolis',name:'Brócolis com Bacon',description:'Brócolis, bacon e Catupiry.',ingredients:['Massa','Molho de tomate','Brócolis','Bacon','Catupiry'],category:'Clássicas',image:'assets/brocolis.webp',price:54.99,available:true,tag:'Clássica'},
     {id:'calabresa',name:'Calabresa',description:'Calabresa e cebola.',ingredients:['Massa','Molho de tomate','Calabresa','Cebola','Azeitonas'],category:'Clássicas',image:'assets/calabresa-real.avif',price:49.99,available:true,tag:'Clássica'},
-    {id:'mussarela',name:'Mussarela',description:'Mussarela, tomate e azeitonas.',ingredients:['Massa','Molho de tomate','Mussarela','Tomate','Azeitonas'],category:'Clássicas',image:'assets/mussarela.webp',price:49.99,available:true,tag:'Clássica'}
+    {id:'mussarela',name:'Mussarela',description:'Mussarela, tomate e azeitonas.',ingredients:['Massa','Molho de tomate','Mussarela','Tomate','Azeitonas'],category:'Clássicas',image:'assets/mussarela.webp',price:49.99,available:true,tag:'Clássica'},
+    ...SWEET_PRODUCTS.map(p=>({...p}))
   ]
 };
 function j(data,status=200,headers={}){
@@ -102,6 +111,9 @@ const WEEKKEYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const isClock=v=>typeof v==='string'&&/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v);
 const clockMin=v=>Number(v.slice(0,2))*60+Number(v.slice(3,5));
 const friendlyClock=v=>v.endsWith(':00')?Number(v.slice(0,2))+'h':Number(v.slice(0,2))+'h'+v.slice(3);
+// Exceção apenas em 20/11/2026; não muda a sexta-feira das próximas semanas.
+const SPECIAL_FRIDAY='2026-11-20';
+const localDateKey=at=>{const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(at);const part=x=>parts.find(v=>v.type===x)?.value;return [part('year'),part('month'),part('day')].join('-');};
 function scheduleFrom(raw){
   const scheduleEnabled=raw.scheduleEnabled===true;
   const input=Array.isArray(raw.weeklyHours)&&raw.weeklyHours.length===7?raw.weeklyHours:null;
@@ -125,7 +137,8 @@ function resolveStoreStatus(state,at=new Date()){
   if(dayIndex<0)throw Error('Dia local desconhecido');
   const current=Number(get('hour'))*60+Number(get('minute'));
   const hours=state.weeklyHours;
-  const today=hours[dayIndex],yesterday=hours[(dayIndex+6)%7];
+  const isSpecialFriday=dayIndex===5&&localDateKey(at)===SPECIAL_FRIDAY;
+  const today=isSpecialFriday?{...hours[dayIndex],start:'19:00'}:hours[dayIndex],yesterday=hours[(dayIndex+6)%7];
   const todayOpen=today.enabled&&(clockMin(today.start)<clockMin(today.end)
     ? current>=clockMin(today.start)&&current<clockMin(today.end)
     : current>=clockMin(today.start));
@@ -134,7 +147,7 @@ function resolveStoreStatus(state,at=new Date()){
   if(todayOpen||previousOvernight)return {acceptingOrders:true,status:'open',nextOpening:null,scheduleEnabled:true};
   let nextOpening=null;
   for(let offset=0;offset<=7;offset++){
-    const index=(dayIndex+offset)%7,record=hours[index];
+    const index=(dayIndex+offset)%7,record=offset===0?today:hours[index];
     if(record.enabled&&(offset>0||clockMin(record.start)>current)){
       nextOpening=WEEKDAYS[index]+' às '+friendlyClock(record.start);
       break;
@@ -146,9 +159,8 @@ export async function publicStoreStatus(env){
   if(!env.DOPPIO_DB)return j({ok:true,...resolveStoreStatus(DEFAULT_STATE)});
   try{
     await ensureDb(env);
-    const row=await env.DOPPIO_DB.prepare('SELECT data FROM admin_state WHERE id=1').first();
-    const data=row?JSON.parse(row.data):DEFAULT_STATE;
-    const state=validateState(data,Number.isInteger(row?.revision)?row.revision:0);
+    const raw=await stateRow(env);
+    const state=validateState(raw,raw.revision);
     return j({ok:true,...resolveStoreStatus(state)});
   }catch(_){
     return error('store_status_unavailable','Não foi possível verificar o funcionamento da pizzaria agora.',503);
@@ -168,26 +180,36 @@ function validateState(raw,revision){
     if(typeof p.id!=='string'||!/^[a-z0-9][a-z0-9-]{1,39}$/.test(p.id)||ids.has(p.id))throw Error('Identificador de sabor inválido ou duplicado.');
     ids.add(p.id);
     if(!validText(p.name,70,2)||!validText(p.description,240)||!validText(p.category,50,2)||!validText(p.tag,36)||!validText(p.image,180,5))throw Error('Preencha corretamente as informações dos sabores.');
-    if(!/^(?:assets\/[A-Za-z0-9/_-]+\.(?:webp|avif|png|jpe?g)|api\/photo\/[a-f0-9-]{36})$/i.test(p.image)||p.image.includes('..'))throw Error('A foto deve ser uma imagem cadastrada da pizzaria.');
-    if(!Number.isFinite(p.price)||p.price<1||p.price>500||Math.abs(p.price*100-Math.round(p.price*100))>1e-6)throw Error('O preço deve ser entre R$ 1 e R$ 500, com até 2 casas decimais.');
+    if(!/^(?:assets\/[A-Za-z0-9/_-]+\.(?:webp|avif|png|jpe?g)|assets\/doce-(?:morango|uva)\.svg|api\/photo\/[a-f0-9-]{36})$/i.test(p.image)||p.image.includes('..'))throw Error('A foto deve ser uma imagem cadastrada da pizzaria.');
+    if(p.price!==null&&(!Number.isFinite(p.price)||p.price<1||p.price>500||Math.abs(p.price*100-Math.round(p.price*100))>1e-6))throw Error('Informe um preço válido (R$ 1 a R$ 500) ou deixe em branco para publicar como preço pendente.');
     if(typeof p.available!=='boolean')throw Error('Disponibilidade inválida.');
     if(!Array.isArray(p.ingredients)||p.ingredients.length>16||!p.ingredients.every(v=>validText(v,50,1)))throw Error('Ingredientes inválidos.');
-    return {id:p.id,name:p.name.trim(),description:p.description.trim(),ingredients:p.ingredients.map(x=>x.trim()),category:p.category.trim(),image:p.image,price:Math.round(p.price*100)/100,available:p.available,tag:p.tag.trim()};
+    return {id:p.id,name:p.name.trim(),description:p.description.trim(),ingredients:p.ingredients.map(x=>x.trim()),category:p.category.trim(),image:p.image,price:p.price===null?null:Math.round(p.price*100)/100,available:p.available,tag:p.tag.trim(),halfAllowed:p.halfAllowed!==false&&!SWEET_IDS.has(p.id)};
   });
-  return {revision,acceptingOrders:raw.acceptingOrders,...schedule,openDays:raw.openDays.trim(),openHours:raw.openHours.trim(),etaMinutes:raw.etaMinutes,products};
+  return {revision,catalogVersion:Number.isInteger(raw.catalogVersion)?raw.catalogVersion:0,acceptingOrders:raw.acceptingOrders,...schedule,openDays:raw.openDays.trim(),openHours:raw.openHours.trim(),etaMinutes:raw.etaMinutes,products};
 }
 async function stateRow(env){
   await ensureDb(env);
-  let row=await env.DOPPIO_DB.prepare('SELECT revision,data FROM admin_state WHERE id=1').first();
-  if(!row){
-    await env.DOPPIO_DB.prepare('INSERT OR IGNORE INTO admin_state (id,revision,data,updated_at) VALUES (1,0,?,?)')
-      .bind(JSON.stringify(DEFAULT_STATE),Math.floor(Date.now()/1000)).run();
-    row=await env.DOPPIO_DB.prepare('SELECT revision,data FROM admin_state WHERE id=1').first();
+  for(let attempt=0;attempt<4;attempt++){
+    let row=await env.DOPPIO_DB.prepare('SELECT revision,data FROM admin_state WHERE id=1').first();
+    if(!row){
+      await env.DOPPIO_DB.prepare('INSERT OR IGNORE INTO admin_state (id,revision,data,updated_at) VALUES (1,0,?,?)')
+        .bind(JSON.stringify(DEFAULT_STATE),Math.floor(Date.now()/1000)).run();
+      continue;
+    }
+    const state=JSON.parse(row.data);
+    state.revision=row.revision;
+    if((state.catalogVersion||0)>=CATALOG_VERSION)return state;
+    if(!Array.isArray(state.products))throw Error('invalid_products');
+    const ids=new Set(state.products.map(p=>p.id));
+    for(const p of SWEET_PRODUCTS)if(!ids.has(p.id))state.products.push({...p});
+    state.catalogVersion=CATALOG_VERSION;
+    const nextRevision=row.revision+1;
+    const updated=await env.DOPPIO_DB.prepare('UPDATE admin_state SET revision=?,data=?,updated_at=? WHERE id=1 AND revision=?')
+      .bind(nextRevision,JSON.stringify({...state,revision:nextRevision}),Math.floor(Date.now()/1000),row.revision).run();
+    if(updated.meta?.changes===1){state.revision=nextRevision;return state;}
   }
-  if(!row)throw Error('state_not_found');
-  const state=JSON.parse(row.data);
-  state.revision=row.revision;
-  return state;
+  throw Error('catalog_migration_conflict');
 }
 async function login(req,env){
   let data;
@@ -263,12 +285,11 @@ export async function publicCatalogScript(env){
   if(!env.DOPPIO_DB)return new Response('/* Configuração pública padrão mantida. */',{headers});
   try{
     await ensureDb(env);
-    const row=await env.DOPPIO_DB.prepare('SELECT data FROM admin_state WHERE id=1').first();
-    if(!row)return new Response('/* Nenhuma alteração administrativa publicada. */',{headers});
-    const data=JSON.parse(row.data);
-    const overlay=validateState(data,Number.isInteger(data.revision)?data.revision:0);
+    const raw=await stateRow(env);
+    const overlay=validateState(raw,raw.revision);
     const current=resolveStoreStatus(overlay);
-    const scheduled=overlay.scheduleEnabled?overlay.weeklyHours.map((day,i)=>day.enabled?WEEKDAYS[i].slice(0,3)+' '+friendlyClock(day.start)+'–'+friendlyClock(day.end):null).filter(Boolean):[];
+    const isSpecialFriday=localDateKey(new Date())===SPECIAL_FRIDAY;
+    const scheduled=overlay.scheduleEnabled?overlay.weeklyHours.map((day,i)=>day.enabled?WEEKDAYS[i].slice(0,3)+(isSpecialFriday&&i===5?' (hoje)':'')+' '+friendlyClock(isSpecialFriday&&i===5?'19:00':day.start)+'–'+friendlyClock(day.end):null).filter(Boolean):[];
     const business={
       openDays:scheduled.length?'Horários programados':overlay.openDays,
       openHours:scheduled.length?scheduled.join(' · '):(overlay.openHours||null),

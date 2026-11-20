@@ -40,6 +40,8 @@ window.DOPPIO_CONFIG = {
     {id:'frango', name:'Frango com Catupiry', description:'Frango e Catupiry.', ingredients:['Massa','Molho de tomate','Frango','Catupiry','Azeitonas'], category:'Clássicas', image:'assets/frango-real.avif', price:54.99, available:true, tag:'Clássica'},
     {id:'brocolis', name:'Brócolis com Bacon', description:'Brócolis, bacon e Catupiry.', ingredients:['Massa','Molho de tomate','Brócolis','Bacon','Catupiry'], category:'Clássicas', image:'assets/brocolis.webp', price:54.99, available:true, tag:'Clássica'},
     {id:'calabresa', name:'Calabresa', description:'Calabresa e cebola.', ingredients:['Massa','Molho de tomate','Calabresa','Cebola','Azeitonas'], category:'Clássicas', image:'assets/calabresa-real.avif', price:49.99, available:true, tag:'Clássica'},
-    {id:'mussarela', name:'Mussarela', description:'Mussarela, tomate e azeitonas.', ingredients:['Massa','Molho de tomate','Mussarela','Tomate','Azeitonas'], category:'Clássicas', image:'assets/mussarela.webp', price:49.99, available:true, tag:'Clássica'}
+    {id:'mussarela', name:'Mussarela', description:'Mussarela, tomate e azeitonas.', ingredients:['Massa','Molho de tomate','Mussarela','Tomate','Azeitonas'], category:'Clássicas', image:'assets/mussarela.webp', price:49.99, available:true, tag:'Clássica'},
+    {id:'chocolate-morango', name:'Chocolate com Morango', description:'Pizza doce de chocolate com morangos.', ingredients:['Massa','Chocolate','Morango'], category:'Doces', image:'assets/doce-morango.svg', price:null, available:true, tag:'Doce', halfAllowed:false},
+    {id:'uva-nevada', name:'Uva Nevada (Ninho com Uva)', description:'Pizza doce de creme de Ninho com uvas.', ingredients:['Massa','Creme de Ninho','Uva'], category:'Doces', image:'assets/doce-uva.svg', price:null, available:true, tag:'Doce', halfAllowed:false}
   ]
 };

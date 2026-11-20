@@ -7,7 +7,9 @@
     {path:'assets/frango-real.avif',name:'Frango com Catupiry'},
     {path:'assets/brocolis.webp',name:'Brócolis com Bacon'},
     {path:'assets/calabresa-real.avif',name:'Calabresa'},
-    {path:'assets/mussarela.webp',name:'Mussarela'}
+    {path:'assets/mussarela.webp',name:'Mussarela'},
+    {path:'assets/doce-morango.svg',name:'Ilustração · Chocolate com Morango'},
+    {path:'assets/doce-uva.svg',name:'Ilustração · Uva Nevada'}
   ];
   let state=null,dirty=false,busy=false,toastTimer;
   let adminPhotos=[];
@@ -162,12 +164,12 @@
     return '<article class="flavor-entry" data-index="'+index+'">'
       +'<div class="flavor-top">'
         +'<img class="flavor-photo" src="/'+esc(product.image)+'" alt="" loading="lazy">'
-        +'<div class="flavor-heading"><span class="flavor-id">SABOR '+String(index+1).padStart(2,'0')+'</span><h4>'+esc(product.name||'Novo sabor')+'</h4><span class="flavor-price">'+money(Number.isFinite(product.price)?product.price:0)+'</span></div>'
-        +'<div class="flavor-controls"><label class="availability"><input type="checkbox" data-field="available"'+(product.available?' checked':'')+'> Disponível</label><button type="button" class="remove-product" data-remove="'+index+'" title="Excluir sabor">Excluir</button></div>'
+        +'<div class="flavor-heading"><span class="flavor-id">SABOR '+String(index+1).padStart(2,'0')+'</span><h4>'+esc(product.name||'Novo sabor')+'</h4><span class="flavor-price">'+(Number.isFinite(product.price)?money(product.price):'Preço pendente')+'</span></div>'
+        +'<div class="flavor-controls"><label class="availability"><input type="checkbox" data-field="available"'+(product.available?' checked':'')+'> Visível no cardápio</label><label class="availability"><input type="checkbox" data-field="halfAllowed"'+(product.halfAllowed!==false&&product.category.toLowerCase()!=='doces'?' checked':'')+(product.category.toLowerCase()==='doces'?' disabled':'')+'> Permite meio a meio</label><button type="button" class="remove-product" data-remove="'+index+'" title="Excluir sabor">Excluir</button></div>'
       +'</div>'
       +'<div class="flavor-grid">'
         +'<label>Nome da pizza<input type="text" data-field="name" value="'+esc(product.name)+'" maxlength="70" required></label>'
-        +'<label>Preço em R$<input type="text" data-field="price" value="'+(Number.isFinite(product.price)?product.price.toFixed(2):'0.00').replace('.',',')+'" inputmode="decimal" maxlength="8" required></label>'
+        +'<label>Preço em R$ (vazio = aguardando)<input type="text" data-field="price" value="'+(Number.isFinite(product.price)?product.price.toFixed(2):'').replace('.',',')+'" inputmode="decimal" maxlength="8" placeholder="Definir preço"></label>'
         +'<label class="wide">Descrição<input type="text" data-field="description" value="'+esc(product.description)+'" maxlength="240"></label>'
         +'<label class="wide">Ingredientes (separados por vírgula)<input type="text" data-field="ingredients" value="'+esc(product.ingredients.join(', '))+'" maxlength="420"></label>'
         +'<label>Categoria<input type="text" data-field="category" value="'+esc(product.category)+'" maxlength="50"></label>'
@@ -646,8 +648,8 @@
     const field=event.target.dataset.field;
     if(field==='price'){
       const input=event.target.value.trim().replace(',','.');
-      item.price=/^\d{1,3}(?:\.\d{1,2})?$/.test(input)?Number(input):NaN;
-      row.querySelector('.flavor-price').textContent=Number.isFinite(item.price)?money(item.price):'Verifique o preço';
+      item.price=input===''?null:/^\d{1,3}(?:\.\d{1,2})?$/.test(input)?Number(input):NaN;
+      row.querySelector('.flavor-price').textContent=item.price===null?'Preço pendente':Number.isFinite(item.price)?money(item.price):'Verifique o preço';
     }else if(field==='ingredients'){
       item.ingredients=event.target.value.split(',').map(x=>x.trim()).filter(Boolean);
     }else if(['name','description','category','tag'].includes(field)){
@@ -673,6 +675,7 @@
     if(!item)return;
     const field=event.target.dataset.field;
     if(field==='available')item.available=event.target.checked;
+    else if(field==='halfAllowed')item.halfAllowed=event.target.checked;
     else if(field==='image'){
       item.image=event.target.value;
       row.querySelector('.flavor-photo').src='/'+item.image;
@@ -692,7 +695,7 @@
     if(!state)return;
     if(state.products.length>=30)return toast('Limite de 30 sabores nesta versão.',true);
     const id='pizza-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);
-    state.products.push({id,name:'Novo sabor',description:'',ingredients:['Massa','Molho de tomate'],category:'Clássicas',image:'assets/mussarela.webp',price:49.99,available:false,tag:'Novidade'});
+    state.products.push({id,name:'Novo sabor',description:'',ingredients:['Massa','Molho de tomate'],category:'Clássicas',image:'assets/mussarela.webp',price:49.99,available:false,tag:'Novidade',halfAllowed:true});
     renderProducts();setDirty();
     const last=$('admin-products').lastElementChild;
     last.scrollIntoView({behavior:'smooth',block:'center'});
@@ -701,7 +704,7 @@
   });
   $('save-state').addEventListener('click',async()=>{
     if(!state||!dirty||busy)return;
-    if(state.products.some(p=>!Number.isFinite(p.price)||p.price<1||p.price>500))return toast('Revise o preço de todos os sabores.',true);
+    if(state.products.some(p=>p.price!==null&&(!Number.isFinite(p.price)||p.price<1||p.price>500)))return toast('Revise os preços: deixe em branco enquanto não estiverem definidos.',true);
     if(state.scheduleEnabled){
       const active=state.weeklyHours.filter(d=>d.enabled);
       if(!active.length)return toast('Selecione pelo menos um dia na programação automática.',true);

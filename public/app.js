@@ -14,6 +14,7 @@
   let storeStatus = cfg.business?.storeStatus || (acceptingOrders?'manual':'paused');
   let nextOpening = cfg.business?.nextOpening || null;
   const byId = id => products.find(p => p.id === id);
+  const isHalfEligible=p=>p&&p.halfAllowed!==false&&String(p.category).toLowerCase()!=='doces'&&!['chocolate-morango','uva-nevada'].includes(p.id)&&validPrice(p.price);
   const formatPrice = n => validPrice(n) ? money(n) : 'A confirmar';
   // Preço de destaque: reais maiores e centavos em posição elevada, sem descontos fictícios.
   const priceMarkup = value => {
@@ -44,13 +45,13 @@
   const normalizeItem = i => {
     if (!i || !Number.isInteger(i.qty) || i.qty < 1 || i.qty > 99) return null;
     const note=cleanNote(i.note);
-    if (i.type === 'half' && byId(i.a) && byId(i.b) && i.a !== i.b) {
+    if (i.type === 'half' && isHalfEligible(byId(i.a)) && isHalfEligible(byId(i.b)) && i.a !== i.b) {
       const [a,b] = [i.a,i.b].sort();
       const normalized={type:'half',a,b,note,qty:i.qty};
       normalized.key=makeKey(normalized);
       return normalized;
     }
-    if (i.type === 'pizza' && byId(i.id)) {
+    if (i.type === 'pizza' && byId(i.id) && validPrice(byId(i.id).price)) {
       const normalized={type:'pizza',id:i.id,note,qty:i.qty};
       normalized.key=makeKey(normalized);
       return normalized;
@@ -78,7 +79,8 @@
     shipping.quote=null;shipping.message='';
     shipping.requestId++;
   };
-  const halfEnabled = cfg.options?.halfHalfEnabled !== false && products.length >= 2;
+  const halfChoices=products.filter(isHalfEligible);
+  const halfEnabled = cfg.options?.halfHalfEnabled !== false && halfChoices.length >= 2;
   const categories = ['Todos', ...new Set(products.map(p => p.category || 'Outros')), ...(halfEnabled ? ['Meio a meio'] : [])];
   let filter = 'Todos';
   let customizing = null;
@@ -96,8 +98,8 @@
     if (!categories.includes(filter)) filter = 'Todos';
     const displayed = products.filter(p => filter === 'Todos' || (filter !== 'Meio a meio' && (p.category||'Outros') === filter));
     const showHalfCard = halfEnabled && (filter === 'Todos' || filter === 'Meio a meio');
-    const halfPhoto1 = byId('brocolis') || products[0];
-    const halfPhoto2 = byId('mussarela') || products[1];
+    const halfPhoto1 = halfChoices.find(p=>p.id==='brocolis') || halfChoices[0];
+    const halfPhoto2 = halfChoices.find(p=>p.id==='mussarela') || halfChoices[1];
     const halfCard = showHalfCard ? `<article class="pizza-card half-choice-card" id="meio-a-meio">
       <div class="pizza-image half-pizza-image">
         <div class="half-split-photos"><img src="${esc(halfPhoto1.image)}" alt="Exemplo de metade: ${esc(halfPhoto1.name)}" loading="lazy" decoding="async" width="280" height="390"><img src="${esc(halfPhoto2.image)}" alt="Exemplo de metade: ${esc(halfPhoto2.name)}" loading="lazy" decoding="async" width="280" height="390"></div>
@@ -107,10 +109,10 @@
       <div class="pizza-bottom"><span class="price price-pending">Valor conforme os sabores</span><button class="add-button half-card-button" data-open-half type="button" ${acceptingOrders?'':'disabled title="Pedidos pausados"'}>½ Escolher sabores</button></div>
       <p class="half-card-caption">Preço pela média dos sabores, sujeito à confirmação.</p></div></article>` : '';
     $('products').innerHTML = displayed.map(p => `<article class="pizza-card">
-      <div class="pizza-image"><img src="${esc(p.image)}" alt="Pizza de ${esc(p.name)}" loading="lazy" decoding="async" width="560" height="390"><span class="pizza-tag">${esc(p.tag||p.category||'Sabor')}</span></div>
+      <div class="pizza-image"><img src="${esc(p.image)}" alt="${esc(p.image.endsWith('.svg')?'Ilustração temporária do sabor '+p.name:'Pizza de '+p.name)}" loading="lazy" decoding="async" width="560" height="390"><span class="pizza-tag">${esc(p.tag||p.category||'Sabor')}</span></div>
       <div class="pizza-body"><span class="pizza-category">${esc(p.category||'Outros')}</span><h3>${esc(p.name)}</h3>
       <p class="pizza-ingredients-line" aria-label="Ingredientes: ${esc(Array.isArray(p.ingredients)?p.ingredients.join(', '):p.description)}">${Array.isArray(p.ingredients)&&p.ingredients.length?p.ingredients.map(esc).join(' · '):esc(p.description)}</p>
-      <div class="pizza-bottom">${priceMarkup(p.price)}<button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="Adicionar ${esc(p.name)} ao carrinho" ${acceptingOrders?'':'disabled title="Pedidos temporariamente pausados"'}>${cartIcon} Adicionar</button></div><button type="button" class="customize-link" data-customize="${esc(p.id)}" ${acceptingOrders?'':'disabled'}>✎ Personalizar / trocar ingrediente</button></div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
+      <div class="pizza-bottom">${priceMarkup(p.price)}<button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="${validPrice(p.price)?'Adicionar '+esc(p.name)+' ao carrinho':'Preço do sabor pendente'}" ${acceptingOrders&&validPrice(p.price)?'':'disabled title="Pedidos indisponíveis ou preço ainda não definido"'}>${validPrice(p.price)?cartIcon+' Adicionar':'Preço em breve'}</button></div>${validPrice(p.price)?'<button type="button" class="customize-link" data-customize="'+esc(p.id)+'" '+(acceptingOrders?'':'disabled')+'>✎ Personalizar / trocar ingrediente</button>':'<p class="half-card-caption">Foto ilustrativa · aguardando preço para liberar pedidos</p>'}</div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
     document.querySelector('.menu-count span').textContent = String(products.length + (halfEnabled ? 1 : 0)).padStart(2,'0');
     renderFilters();
   }
@@ -261,7 +263,7 @@
   }
   function add(item) {
     const normalized=normalizeItem({...item,qty:1});
-    if (!normalized) return;
+    if (!normalized || !validPrice(itemPrice(normalized))) return;
     if(!acceptingOrders){toast('A pizzaria não está recebendo pedidos neste horário.');return;}
     const found = cart.find(c => c.key === normalized.key);
     if (found) found.qty = Math.min(99,found.qty+1);
@@ -481,9 +483,9 @@
     document.body.classList.add('modal-open'); $(id).querySelector('button')?.focus();
   }
   function populateHalf() {
-    const options = products.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+    const options = halfChoices.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
     $('half-one').innerHTML=$('half-two').innerHTML=options;
-    $('half-two').selectedIndex=Math.min(1,products.length-1);
+    $('half-two').selectedIndex=Math.min(1,halfChoices.length-1);
     halfPrice();
   }
   function halfPrice() {
@@ -556,7 +558,7 @@
   $('half-two').addEventListener('change',halfPrice);
   $('add-half').addEventListener('click',()=>{
     const a=$('half-one').value,b=$('half-two').value;
-    if (!byId(a)||!byId(b)) return;
+    if (!isHalfEligible(byId(a))||!isHalfEligible(byId(b))) return;
     if (a===b) {toast('Escolha dois sabores diferentes.');return;}
     const [x,y]=[a,b].sort(); add({type:'half',a:x,b:y,note:cleanNote($('half-notes').value)});closeDialogs();
   });
@@ -575,13 +577,13 @@
   $('delivery-details').textContent=`Até ${maxKm} km · Frete a partir de ${money(baseFee)}`;
   $('payments').textContent=(cfg.business.paymentMethods||[]).join(' · ')||'A confirmar';
   $('draft-note').hidden=!cfg.business.draft;
-  if (cfg.options?.halfHalfEnabled===false || products.length<2) $('meio-a-meio').hidden=true;
+  if (!halfEnabled) document.querySelector('#meio-a-meio')?.setAttribute('hidden','');
   const allPricesReady=products.every(p=>validPrice(p.price));
   function updateStoreBanner(){
     $('menu-note').textContent=!acceptingOrders
       ? (storeStatus==='closed'?'Fechado neste horário':'Pedidos temporariamente pausados')
       :storeStatus==='open'?'Aberto agora · pedidos disponíveis'
-      :allPricesReady?'Preços definidos · frete estimado pelo CEP':'Preços das pizzas a confirmar · frete automático pelo CEP';
+      :allPricesReady?'Preços definidos · frete estimado pelo CEP':'Sabores doces com preço pendente · frete estimado pelo CEP';
     let notice=document.querySelector('.store-paused-banner');
     if(acceptingOrders){notice?.remove();return;}
     if(!notice){
