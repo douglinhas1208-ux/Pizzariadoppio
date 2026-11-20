@@ -102,8 +102,10 @@ function validateOrder(input,shop){
       name=p.name;unitCents=cents(p.price);
     }else if(item.type==='half'){
       const a=catalog.get(item.a),b=catalog.get(item.b);
-      if(!a||!b||a.id===b.id||!Number.isFinite(a.price)||!Number.isFinite(b.price)||a.halfAllowed===false||b.halfAllowed===false||a.category.toLocaleLowerCase('pt-BR')==='doces'||b.category.toLocaleLowerCase('pt-BR')==='doces'||['chocolate-morango','uva-nevada'].includes(a.id)||['chocolate-morango','uva-nevada'].includes(b.id))throw Error('Pizzas doces não podem ser escolhidas no meio a meio.');
-      name='Meio a meio: '+a.name+' / '+b.name;
+      if(!a||!b||a.id===b.id||!Number.isFinite(a.price)||!Number.isFinite(b.price)||a.halfAllowed===false||b.halfAllowed===false)throw Error('As metades escolhidas não estão disponíveis.');
+      const sweet=p=>['chocolate-morango','uva-nevada'].includes(p.id)||String(p.category).toLocaleLowerCase('pt-BR')==='doces';
+      if(sweet(a)!==sweet(b))throw Error('Não é permitido misturar pizza salgada com pizza doce no meio a meio.');
+      name=(sweet(a)?'Meio a meio doce: ':'Meio a meio salgado: ')+a.name+' / '+b.name;
       unitCents=Math.round((cents(a.price)+cents(b.price))/2);
     }else throw Error('Tipo de pizza inválido.');
     count+=item.qty;

@@ -165,7 +165,7 @@
       +'<div class="flavor-top">'
         +'<img class="flavor-photo" src="/'+esc(product.image)+'" alt="" loading="lazy">'
         +'<div class="flavor-heading"><span class="flavor-id">SABOR '+String(index+1).padStart(2,'0')+'</span><h4>'+esc(product.name||'Novo sabor')+'</h4><span class="flavor-price">'+(Number.isFinite(product.price)?money(product.price):'Preço pendente')+'</span></div>'
-        +'<div class="flavor-controls"><label class="availability"><input type="checkbox" data-field="available"'+(product.available?' checked':'')+'> Visível no cardápio</label><label class="availability"><input type="checkbox" data-field="halfAllowed"'+(product.halfAllowed!==false&&product.category.toLowerCase()!=='doces'?' checked':'')+(product.category.toLowerCase()==='doces'?' disabled':'')+'> Permite meio a meio</label><button type="button" class="remove-product" data-remove="'+index+'" title="Excluir sabor">Excluir</button></div>'
+        +'<div class="flavor-controls"><label class="availability"><input type="checkbox" data-field="available"'+(product.available?' checked':'')+'> Visível no cardápio</label><label class="availability"><input type="checkbox" data-field="halfAllowed"'+(product.halfAllowed!==false?' checked':'')+'> Permite meio a meio (somente mesma categoria)</label><button type="button" class="remove-product" data-remove="'+index+'" title="Excluir sabor">Excluir</button></div>'
       +'</div>'
       +'<div class="flavor-grid">'
         +'<label>Nome da pizza<input type="text" data-field="name" value="'+esc(product.name)+'" maxlength="70" required></label>'

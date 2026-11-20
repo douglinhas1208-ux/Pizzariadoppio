@@ -10,12 +10,12 @@ const COOKIE='doppio_admin';
 const SESSION_SECONDS=8*60*60;
 const enc=new TextEncoder();
 const SWEET_PRODUCTS=[
-  {id:'chocolate-morango',name:'Chocolate com Morango',description:'Pizza doce de chocolate com morangos.',ingredients:['Massa','Chocolate','Morango'],category:'Doces',image:'assets/doce-morango.svg',price:null,available:true,tag:'Doce',halfAllowed:false},
-  {id:'uva-nevada',name:'Uva Nevada (Ninho com Uva)',description:'Pizza doce de creme de Ninho com uvas.',ingredients:['Massa','Creme de Ninho','Uva'],category:'Doces',image:'assets/doce-uva.svg',price:null,available:true,tag:'Doce',halfAllowed:false}
+  {id:'chocolate-morango',name:'Chocolate com Morango',description:'Pizza doce de chocolate com morangos.',ingredients:['Massa','Chocolate','Morango'],category:'Doces',image:'assets/doce-morango.svg',price:54.99,available:true,tag:'Doce',halfAllowed:true},
+  {id:'uva-nevada',name:'Uva Nevada (Ninho com Uva)',description:'Pizza doce de creme de Ninho com uvas.',ingredients:['Massa','Creme de Ninho','Uva'],category:'Doces',image:'assets/doce-uva.svg',price:54.99,available:true,tag:'Doce',halfAllowed:true}
 ];
-const CATALOG_VERSION=2;
+const CATALOG_VERSION=3;
 const SWEET_IDS=new Set(SWEET_PRODUCTS.map(p=>p.id));
-const eligibleHalf=p=>p && p.halfAllowed!==false && p.category.toLocaleLowerCase('pt-BR')!=='doces' && !SWEET_IDS.has(p.id);
+// Metades são agrupadas em doces ou salgadas no checkout e revalidadas no servidor.
 const DEFAULT_STATE={
   revision:0,
   catalogVersion:CATALOG_VERSION,
@@ -184,7 +184,7 @@ function validateState(raw,revision){
     if(p.price!==null&&(!Number.isFinite(p.price)||p.price<1||p.price>500||Math.abs(p.price*100-Math.round(p.price*100))>1e-6))throw Error('Informe um preço válido (R$ 1 a R$ 500) ou deixe em branco para publicar como preço pendente.');
     if(typeof p.available!=='boolean')throw Error('Disponibilidade inválida.');
     if(!Array.isArray(p.ingredients)||p.ingredients.length>16||!p.ingredients.every(v=>validText(v,50,1)))throw Error('Ingredientes inválidos.');
-    return {id:p.id,name:p.name.trim(),description:p.description.trim(),ingredients:p.ingredients.map(x=>x.trim()),category:p.category.trim(),image:p.image,price:p.price===null?null:Math.round(p.price*100)/100,available:p.available,tag:p.tag.trim(),halfAllowed:p.halfAllowed!==false&&!SWEET_IDS.has(p.id)};
+    return {id:p.id,name:p.name.trim(),description:p.description.trim(),ingredients:p.ingredients.map(x=>x.trim()),category:p.category.trim(),image:p.image,price:p.price===null?null:Math.round(p.price*100)/100,available:p.available,tag:p.tag.trim(),halfAllowed:p.halfAllowed!==false};
   });
   return {revision,catalogVersion:Number.isInteger(raw.catalogVersion)?raw.catalogVersion:0,acceptingOrders:raw.acceptingOrders,...schedule,openDays:raw.openDays.trim(),openHours:raw.openHours.trim(),etaMinutes:raw.etaMinutes,products};
 }
@@ -202,7 +202,11 @@ async function stateRow(env){
     if((state.catalogVersion||0)>=CATALOG_VERSION)return state;
     if(!Array.isArray(state.products))throw Error('invalid_products');
     const ids=new Set(state.products.map(p=>p.id));
-    for(const p of SWEET_PRODUCTS)if(!ids.has(p.id))state.products.push({...p});
+    for(const p of SWEET_PRODUCTS){
+      const current=state.products.find(item=>item.id===p.id);
+      if(!current)state.products.push({...p});
+      else {current.price=54.99;current.halfAllowed=true;current.category='Doces';}
+    }
     state.catalogVersion=CATALOG_VERSION;
     const nextRevision=row.revision+1;
     const updated=await env.DOPPIO_DB.prepare('UPDATE admin_state SET revision=?,data=?,updated_at=? WHERE id=1 AND revision=?')

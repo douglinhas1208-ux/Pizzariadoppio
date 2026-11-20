@@ -116,7 +116,7 @@ Esta é **atualização periódica (quase em tempo real)**, não uma conexão pu
 ## Pizzas doces e horário especial — 20/11/2026
 
 - Novos sabores: Chocolate com Morango e Uva Nevada (Ninho com Uva) na categoria **Doces**.
-- Não permitidos no meio a meio (filtro de seleção no navegador, carrinhos antigos, e validação no servidor).
-- Até definir preço no /admin, ambos aparecem com **Preço a confirmar** e botão bloqueado; nunca usar preço fictício. Os desenhos são ilustrações provisórias e devem ser substituídos por fotos reais enviadas pela pizzaria.
+- Existem duas opções separadas: meio a meio salgado (somente salgadas) e meio a meio doce (somente doces). Misturas são bloqueadas no navegador e servidor.
+- Valores confirmados: R$ 54,99 cada doce. A opção meio a meio doce Chocolate com Morango + Uva Nevada custa R$ 54,99. Os desenhos são ilustrações provisórias e devem ser substituídos por fotos reais enviadas pela pizzaria.
 - Migração versionada do D1 acrescenta doces à primeira leitura sem sobrescrever edições existentes; preservar catalogVersion e halfAllowed em salvamentos posteriores.
 - **Somente sexta 20/11/2026**, abertura 19h em vez de 18h, respeitando o fuso São Paulo e o fechamento semanal configurado. Próximas sextas seguem configuração normal do admin.
