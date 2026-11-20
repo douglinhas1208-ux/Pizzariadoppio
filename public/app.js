@@ -14,7 +14,9 @@
   let storeStatus = cfg.business?.storeStatus || (acceptingOrders?'manual':'paused');
   let nextOpening = cfg.business?.nextOpening || null;
   const byId = id => products.find(p => p.id === id);
-  const isHalfEligible=p=>p&&p.halfAllowed!==false&&String(p.category).toLowerCase()!=='doces'&&!['chocolate-morango','uva-nevada'].includes(p.id)&&validPrice(p.price);
+  const isSweet=p=>p&&(['chocolate-morango','uva-nevada'].includes(p.id)||String(p.category).toLocaleLowerCase('pt-BR')==='doces');
+  const isHalfEligible=p=>p&&p.halfAllowed!==false&&validPrice(p.price);
+  const sameHalfGroup=(a,b)=>isHalfEligible(a)&&isHalfEligible(b)&&isSweet(a)===isSweet(b);
   const formatPrice = n => validPrice(n) ? money(n) : 'A confirmar';
   // Preço de destaque: reais maiores e centavos em posição elevada, sem descontos fictícios.
   const priceMarkup = value => {
@@ -33,10 +35,11 @@
     return i.note ? `${base}:obs:${encodeURIComponent(i.note)}` : base;
   };
   const formatName = i => i.type === 'half'
-    ? `Meio a meio: ${byId(i.a)?.name ?? 'Sabor'} / ${byId(i.b)?.name ?? 'Sabor'}`
+    ? `Meio a meio ${isSweet(byId(i.a))?'doce':'salgado'}: ${byId(i.a)?.name ?? 'Sabor'} / ${byId(i.b)?.name ?? 'Sabor'}`
     : byId(i.id)?.name ?? 'Pizza';
   const itemPrice = i => {
     if (i.type === 'half') {
+      if(!sameHalfGroup(byId(i.a),byId(i.b)))return null;
       const a = byId(i.a)?.price, b = byId(i.b)?.price;
       return validPrice(a) && validPrice(b) ? (a + b) / 2 : null;
     }
@@ -45,7 +48,7 @@
   const normalizeItem = i => {
     if (!i || !Number.isInteger(i.qty) || i.qty < 1 || i.qty > 99) return null;
     const note=cleanNote(i.note);
-    if (i.type === 'half' && isHalfEligible(byId(i.a)) && isHalfEligible(byId(i.b)) && i.a !== i.b) {
+    if (i.type === 'half' && sameHalfGroup(byId(i.a),byId(i.b)) && i.a !== i.b) {
       const [a,b] = [i.a,i.b].sort();
       const normalized={type:'half',a,b,note,qty:i.qty};
       normalized.key=makeKey(normalized);
@@ -79,10 +82,13 @@
     shipping.quote=null;shipping.message='';
     shipping.requestId++;
   };
-  const halfChoices=products.filter(isHalfEligible);
+  const halfChoices=products.filter(p=>isHalfEligible(p)&&!isSweet(p));
+  const sweetChoices=products.filter(p=>isHalfEligible(p)&&isSweet(p));
   const halfEnabled = cfg.options?.halfHalfEnabled !== false && halfChoices.length >= 2;
-  const categories = ['Todos', ...new Set(products.map(p => p.category || 'Outros')), ...(halfEnabled ? ['Meio a meio'] : [])];
-  let filter = 'Todos';
+  const sweetHalfEnabled = cfg.options?.halfHalfEnabled !== false && sweetChoices.length >= 2;
+  const halfCardCount=Number(halfEnabled)+Number(sweetHalfEnabled);
+  const categories = ['Todos', ...new Set(products.map(p => p.category || 'Outros')), ...(halfCardCount ? ['Meio a meio'] : [])];
+  let filter = 'Todos',halfKind='salgada';
   let customizing = null;
   let toastTimer, activeTrigger = null;
   const saveCart = () => { try { localStorage.setItem('doppio-cart-v2', JSON.stringify(cart)); } catch (_) {} };
@@ -91,29 +97,35 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
   }
   function renderFilters() {
-    document.querySelector('.filter-group').innerHTML = categories.map((name,idx) => `<button class="filter ${name===filter?'active':''}" data-filter="${esc(name)}" type="button" aria-pressed="${name===filter}">${esc(name)}${idx===0?` <span id="all-count">${String(products.length + (halfEnabled ? 1 : 0)).padStart(2,'0')}</span>`:''}</button>`).join('');
+    document.querySelector('.filter-group').innerHTML = categories.map((name,idx) => `<button class="filter ${name===filter?'active':''}" data-filter="${esc(name)}" type="button" aria-pressed="${name===filter}">${esc(name)}${idx===0?` <span id="all-count">${String(products.length + halfCardCount).padStart(2,'0')}</span>`:''}</button>`).join('');
   }
   const cartIcon = `<svg class="icon-cart" viewBox="0 0 24 24" width="21" height="21" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.4 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/></svg>`;
   function renderProducts() {
     if (!categories.includes(filter)) filter = 'Todos';
     const displayed = products.filter(p => filter === 'Todos' || (filter !== 'Meio a meio' && (p.category||'Outros') === filter));
-    const showHalfCard = halfEnabled && (filter === 'Todos' || filter === 'Meio a meio');
+    const showHalfCard = halfEnabled && (filter === 'Todos' || filter === 'Meio a meio' || filter === 'Clássicas');
+    const showSweetHalfCard = sweetHalfEnabled && (filter === 'Todos' || filter === 'Meio a meio' || filter === 'Doces');
     const halfPhoto1 = halfChoices.find(p=>p.id==='brocolis') || halfChoices[0];
     const halfPhoto2 = halfChoices.find(p=>p.id==='mussarela') || halfChoices[1];
-    const halfCard = showHalfCard ? `<article class="pizza-card half-choice-card" id="meio-a-meio">
+    const sweetPhoto1=sweetChoices.find(p=>p.id==='chocolate-morango')||sweetChoices[0];
+    const sweetPhoto2=sweetChoices.find(p=>p.id==='uva-nevada')||sweetChoices[1];
+    const halfCard = showHalfCard ? `<article class="pizza-card half-choice-card" id="meio-a-meio-salgado">
       <div class="pizza-image half-pizza-image">
         <div class="half-split-photos"><img src="${esc(halfPhoto1.image)}" alt="Exemplo de metade: ${esc(halfPhoto1.name)}" loading="lazy" decoding="async" width="280" height="390"><img src="${esc(halfPhoto2.image)}" alt="Exemplo de metade: ${esc(halfPhoto2.name)}" loading="lazy" decoding="async" width="280" height="390"></div>
         <span class="pizza-tag">MEIO A MEIO</span><span class="half-image-mark" aria-hidden="true">½</span>
       </div>
       <div class="pizza-body"><span class="pizza-category">PERSONALIZE SUA PIZZA</span><h3>Pizza meio a meio</h3><p>Escolha duas metades entre nossos sabores. Você também pode pedir alterações nos ingredientes.</p>
-      <div class="pizza-bottom"><span class="price price-pending">Valor conforme os sabores</span><button class="add-button half-card-button" data-open-half type="button" ${acceptingOrders?'':'disabled title="Pedidos pausados"'}>½ Escolher sabores</button></div>
-      <p class="half-card-caption">Preço pela média dos sabores, sujeito à confirmação.</p></div></article>` : '';
+      <div class="pizza-bottom"><span class="price price-pending">Valor conforme os sabores</span><button class="add-button half-card-button" data-open-half="salgada" type="button" ${acceptingOrders?'':'disabled title="Pedidos pausados"'}>½ Escolher sabores</button></div>
+      <p class="half-card-caption">Somente sabores salgados · preço pela média das metades.</p></div></article>` : '';
+    const sweetHalfCard = showSweetHalfCard ? `<article class="pizza-card half-choice-card" id="meio-a-meio-doce">
+      <div class="pizza-image half-pizza-image"><div class="half-split-photos"><img src="${esc(sweetPhoto1.image)}" alt="${esc(sweetPhoto1.name)}" loading="lazy"><img src="${esc(sweetPhoto2.image)}" alt="${esc(sweetPhoto2.name)}" loading="lazy"></div><span class="pizza-tag">MEIO A MEIO DOCE</span><span class="half-image-mark" aria-hidden="true">½</span></div>
+      <div class="pizza-body"><span class="pizza-category">PIZZAS DOCES</span><h3>Meio a meio doce</h3><p>Metade Chocolate com Morango, metade Uva Nevada. Sem misturar com salgadas.</p><div class="pizza-bottom">${priceMarkup((sweetPhoto1.price+sweetPhoto2.price)/2)}<button class="add-button half-card-button" data-open-half="doce" type="button" ${acceptingOrders?'':'disabled title="Pedidos pausados"'}>½ Escolher doces</button></div><p class="half-card-caption">Somente doces · ilustrações provisórias até chegar a foto real.</p></div></article>` : '';
     $('products').innerHTML = displayed.map(p => `<article class="pizza-card">
       <div class="pizza-image"><img src="${esc(p.image)}" alt="${esc(p.image.endsWith('.svg')?'Ilustração temporária do sabor '+p.name:'Pizza de '+p.name)}" loading="lazy" decoding="async" width="560" height="390"><span class="pizza-tag">${esc(p.tag||p.category||'Sabor')}</span></div>
       <div class="pizza-body"><span class="pizza-category">${esc(p.category||'Outros')}</span><h3>${esc(p.name)}</h3>
       <p class="pizza-ingredients-line" aria-label="Ingredientes: ${esc(Array.isArray(p.ingredients)?p.ingredients.join(', '):p.description)}">${Array.isArray(p.ingredients)&&p.ingredients.length?p.ingredients.map(esc).join(' · '):esc(p.description)}</p>
-      <div class="pizza-bottom">${priceMarkup(p.price)}<button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="${validPrice(p.price)?'Adicionar '+esc(p.name)+' ao carrinho':'Preço do sabor pendente'}" ${acceptingOrders&&validPrice(p.price)?'':'disabled title="Pedidos indisponíveis ou preço ainda não definido"'}>${validPrice(p.price)?cartIcon+' Adicionar':'Preço em breve'}</button></div>${validPrice(p.price)?'<button type="button" class="customize-link" data-customize="'+esc(p.id)+'" '+(acceptingOrders?'':'disabled')+'>✎ Personalizar / trocar ingrediente</button>':'<p class="half-card-caption">Foto ilustrativa · aguardando preço para liberar pedidos</p>'}</div></article>`).join('') + halfCard || '<p>Novos sabores em breve.</p>';
-    document.querySelector('.menu-count span').textContent = String(products.length + (halfEnabled ? 1 : 0)).padStart(2,'0');
+      <div class="pizza-bottom">${priceMarkup(p.price)}<button class="add-button" data-add="${esc(p.id)}" type="button" aria-label="${validPrice(p.price)?'Adicionar '+esc(p.name)+' ao carrinho':'Preço do sabor pendente'}" ${acceptingOrders&&validPrice(p.price)?'':'disabled title="Pedidos indisponíveis ou preço ainda não definido"'}>${validPrice(p.price)?cartIcon+' Adicionar':'Preço em breve'}</button></div>${validPrice(p.price)?'<button type="button" class="customize-link" data-customize="'+esc(p.id)+'" '+(acceptingOrders?'':'disabled')+'>✎ Personalizar / trocar ingrediente</button>':''}${p.image.endsWith('.svg')?'<p class="half-card-caption">Ilustração provisória · foto real em breve.</p>':''}</div></article>`).join('') + halfCard + sweetHalfCard || '<p>Novos sabores em breve.</p>';
+    document.querySelector('.menu-count span').textContent = String(products.length + halfCardCount).padStart(2,'0');
     renderFilters();
   }
   function totals(){
@@ -482,18 +494,22 @@
     $('overlay').hidden=false; $(id).hidden=false; $(id).setAttribute('aria-hidden','false');
     document.body.classList.add('modal-open'); $(id).querySelector('button')?.focus();
   }
-  function populateHalf() {
-    const options = halfChoices.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  function populateHalf(kind='salgada') {
+    halfKind=kind==='doce'?'doce':'salgada';
+    const chosen=halfKind==='doce'?sweetChoices:halfChoices;
+    const options=chosen.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+    $('half-title').textContent=halfKind==='doce'?'Meio a meio doce':'Meio a meio salgado';
     $('half-one').innerHTML=$('half-two').innerHTML=options;
-    $('half-two').selectedIndex=Math.min(1,halfChoices.length-1);
+    $('half-two').selectedIndex=Math.min(1,chosen.length-1);
     halfPrice();
   }
   function halfPrice() {
     const a=byId($('half-one').value),b=byId($('half-two').value);
-    $('half-price').textContent=a&&b&&validPrice(a.price)&&validPrice(b.price)?`Valor da pizza: ${money((a.price+b.price)/2)}`:'Valor da pizza: a confirmar';
+    $('half-price').textContent=sameHalfGroup(a,b)?`Valor da pizza: ${money((a.price+b.price)/2)}`:'Selecione duas metades do mesmo tipo.';
   }
   document.addEventListener('click', event => {
-    if (event.target.closest('[data-open-half]')) {if(!acceptingOrders)return toast('Pedidos indisponíveis neste horário.');populateHalf();$('half-notes').value='';openDialog('half-modal');return;}
+    const halfButton=event.target.closest('[data-open-half]');
+    if (halfButton) {if(!acceptingOrders)return toast('Pedidos indisponíveis neste horário.');populateHalf(halfButton.dataset.openHalf);$('half-notes').value='';openDialog('half-modal');return;}
     const addButton=event.target.closest('[data-add]');
     if (addButton) {const id=addButton.dataset.add;if(byId(id))add({type:'pizza',id});return;}
     const custom=event.target.closest('[data-customize]');
@@ -558,7 +574,7 @@
   $('half-two').addEventListener('change',halfPrice);
   $('add-half').addEventListener('click',()=>{
     const a=$('half-one').value,b=$('half-two').value;
-    if (!isHalfEligible(byId(a))||!isHalfEligible(byId(b))) return;
+    if (!sameHalfGroup(byId(a),byId(b)) || isSweet(byId(a))!==(halfKind==='doce')) {toast('Escolha duas pizzas do mesmo tipo: doces ou salgadas.');return;}
     if (a===b) {toast('Escolha dois sabores diferentes.');return;}
     const [x,y]=[a,b].sort(); add({type:'half',a:x,b:y,note:cleanNote($('half-notes').value)});closeDialogs();
   });
@@ -577,7 +593,7 @@
   $('delivery-details').textContent=`Até ${maxKm} km · Frete a partir de ${money(baseFee)}`;
   $('payments').textContent=(cfg.business.paymentMethods||[]).join(' · ')||'A confirmar';
   $('draft-note').hidden=!cfg.business.draft;
-  if (!halfEnabled) document.querySelector('#meio-a-meio')?.setAttribute('hidden','');
+  // Cada opção meio a meio é mostrada somente quando há duas metades elegíveis do mesmo tipo.
   const allPricesReady=products.every(p=>validPrice(p.price));
   function updateStoreBanner(){
     $('menu-note').textContent=!acceptingOrders
