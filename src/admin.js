@@ -10,10 +10,10 @@ const COOKIE='doppio_admin';
 const SESSION_SECONDS=8*60*60;
 const enc=new TextEncoder();
 const SWEET_PRODUCTS=[
-  {id:'chocolate-morango',name:'Chocolate com Morango',description:'Pizza doce de chocolate com morangos.',ingredients:['Massa','Chocolate','Morango'],category:'Doces',image:'assets/doce-morango.svg',price:54.99,available:true,tag:'Doce',halfAllowed:true},
-  {id:'uva-nevada',name:'Uva Nevada (Ninho com Uva)',description:'Pizza doce de creme de Ninho com uvas.',ingredients:['Massa','Creme de Ninho','Uva'],category:'Doces',image:'assets/doce-uva.svg',price:54.99,available:true,tag:'Doce',halfAllowed:true}
+  {id:'chocolate-morango',name:'Chocolate com Morango',description:'Pizza doce de chocolate com morangos.',ingredients:['Massa','Chocolate','Morango'],category:'Doces',image:'assets/doce-morango.svg',price:56.99,available:true,tag:'Doce',halfAllowed:true},
+  {id:'uva-nevada',name:'Uva Nevada (Ninho com Uva)',description:'Pizza doce de creme de Ninho com uvas.',ingredients:['Massa','Creme de Ninho','Uva'],category:'Doces',image:'assets/doce-uva.svg',price:56.99,available:true,tag:'Doce',halfAllowed:true}
 ];
-const CATALOG_VERSION=3;
+const CATALOG_VERSION=4;
 const SWEET_IDS=new Set(SWEET_PRODUCTS.map(p=>p.id));
 // Metades são agrupadas em doces ou salgadas no checkout e revalidadas no servidor.
 const DEFAULT_STATE={
@@ -205,7 +205,7 @@ async function stateRow(env){
     for(const p of SWEET_PRODUCTS){
       const current=state.products.find(item=>item.id===p.id);
       if(!current)state.products.push({...p});
-      else {current.price=54.99;current.halfAllowed=true;current.category='Doces';}
+      else {if(current.price===54.99||current.price===null)current.price=56.99;current.halfAllowed=true;current.category='Doces';}
     }
     state.catalogVersion=CATALOG_VERSION;
     const nextRevision=row.revision+1;
