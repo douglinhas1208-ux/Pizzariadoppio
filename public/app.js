@@ -114,7 +114,7 @@
         <div class="half-split-photos"><img src="${esc(halfPhoto1.image)}" alt="Exemplo de metade: ${esc(halfPhoto1.name)}" loading="lazy" decoding="async" width="280" height="390"><img src="${esc(halfPhoto2.image)}" alt="Exemplo de metade: ${esc(halfPhoto2.name)}" loading="lazy" decoding="async" width="280" height="390"></div>
         <span class="pizza-tag">MEIO A MEIO</span><span class="half-image-mark" aria-hidden="true">½</span>
       </div>
-      <div class="pizza-body"><span class="pizza-category">PERSONALIZE SUA PIZZA</span><h3>Pizza meio a meio</h3><p>Escolha duas metades entre nossos sabores. Você também pode pedir alterações nos ingredientes.</p>
+      <div class="pizza-body"><span class="pizza-category">PERSONALIZE SUA PIZZA</span><h3>Meio a meio salgado</h3><p>Escolha duas metades salgadas. Para pizzas doces, use a opção separada abaixo.</p>
       <div class="pizza-bottom"><span class="price price-pending">Valor conforme os sabores</span><button class="add-button half-card-button" data-open-half="salgada" type="button" ${acceptingOrders?'':'disabled title="Pedidos pausados"'}>½ Escolher sabores</button></div>
       <p class="half-card-caption">Somente sabores salgados · preço pela média das metades.</p></div></article>` : '';
     const sweetHalfCard = showSweetHalfCard ? `<article class="pizza-card half-choice-card" id="meio-a-meio-doce">
