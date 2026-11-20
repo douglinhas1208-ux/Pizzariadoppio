@@ -120,3 +120,11 @@ Esta é **atualização periódica (quase em tempo real)**, não uma conexão pu
 - Valores confirmados: R$ 54,99 cada doce. A opção meio a meio doce Chocolate com Morango + Uva Nevada custa R$ 54,99. Os desenhos são ilustrações provisórias e devem ser substituídos por fotos reais enviadas pela pizzaria.
 - Migração versionada do D1 acrescenta doces à primeira leitura sem sobrescrever edições existentes; preservar catalogVersion e halfAllowed em salvamentos posteriores.
 - **Somente sexta 20/11/2026**, abertura 19h em vez de 18h, respeitando o fuso São Paulo e o fechamento semanal configurado. Próximas sextas seguem configuração normal do admin.
+
+
+## Fotos ilustrativas completas do catálogo — 20/11/2026
+
+- Chocolate com Morango e Uva Nevada possuem imagens ilustrativas inteiras, enquadradas sem cortar as pizzas, em AVIF 640 × 446 para cards 560 × 390, com mais definição que a miniatura anterior.
+- As imagens foram geradas para apresentação e não devem ser descritas como fotos reais dos produtos. Substituir pelos registros reais quando forem disponibilizados.
+- Migração versionada do D1 (catalogVersion 6) atualiza apenas os caminhos anteriores conhecidos e preserva fotografias personalizadas eventualmente enviadas pelo painel.
+- Os valores R$ 56,99 para ambas e o meio a meio doce independente permanecem inalterados.

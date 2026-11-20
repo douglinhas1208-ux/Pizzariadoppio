@@ -10,7 +10,9 @@
     {path:'assets/mussarela.webp',name:'Mussarela'},
     {path:'assets/doce-morango.svg',name:'Ilustração · Chocolate com Morango'},
     {path:'assets/doce-uva.svg',name:'Ilustração · Uva Nevada'},
-    {path:'assets/uva-nevada-foto-real.avif',name:'Uva Nevada · Foto real da Doppio'}
+    {path:'assets/uva-nevada-foto-real.avif',name:'Uva Nevada · Foto real da Doppio'},
+    {path:'assets/chocolate-morango-catalogo.avif',name:'Chocolate com Morango · Imagem ilustrativa'},
+    {path:'assets/uva-nevada-catalogo.avif',name:'Uva Nevada · Imagem ilustrativa'}
   ];
   let state=null,dirty=false,busy=false,toastTimer;
   let adminPhotos=[];
