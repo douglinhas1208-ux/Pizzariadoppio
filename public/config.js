@@ -42,6 +42,6 @@ window.DOPPIO_CONFIG = {
     {id:'calabresa', name:'Calabresa', description:'Calabresa e cebola.', ingredients:['Massa','Molho de tomate','Calabresa','Cebola','Azeitonas'], category:'Clássicas', image:'assets/calabresa-real.avif', price:49.99, available:true, tag:'Clássica'},
     {id:'mussarela', name:'Mussarela', description:'Mussarela, tomate e azeitonas.', ingredients:['Massa','Molho de tomate','Mussarela','Tomate','Azeitonas'], category:'Clássicas', image:'assets/mussarela.webp', price:49.99, available:true, tag:'Clássica'},
     {id:'chocolate-morango', name:'Chocolate com Morango', description:'Pizza doce de chocolate com morangos.', ingredients:['Massa','Chocolate','Morango'], category:'Doces', image:'assets/doce-morango.svg', price:56.99, available:true, tag:'Doce', halfAllowed:true},
-    {id:'uva-nevada', name:'Uva Nevada (Ninho com Uva)', description:'Pizza doce de creme de Ninho com uvas.', ingredients:['Massa','Creme de Ninho','Uva'], category:'Doces', image:'assets/doce-uva.svg', price:56.99, available:true, tag:'Doce', halfAllowed:true}
+    {id:'uva-nevada', name:'Uva Nevada (Ninho com Uva)', description:'Pizza doce de creme de Ninho com uvas.', ingredients:['Massa','Creme de Ninho','Uva'], category:'Doces', image:'assets/uva-nevada-foto-real.avif', price:56.99, available:true, tag:'Doce', halfAllowed:true}
   ]
 };

@@ -9,7 +9,8 @@
     {path:'assets/calabresa-real.avif',name:'Calabresa'},
     {path:'assets/mussarela.webp',name:'Mussarela'},
     {path:'assets/doce-morango.svg',name:'Ilustração · Chocolate com Morango'},
-    {path:'assets/doce-uva.svg',name:'Ilustração · Uva Nevada'}
+    {path:'assets/doce-uva.svg',name:'Ilustração · Uva Nevada'},
+    {path:'assets/uva-nevada-foto-real.avif',name:'Uva Nevada · Foto real da Doppio'}
   ];
   let state=null,dirty=false,busy=false,toastTimer;
   let adminPhotos=[];
