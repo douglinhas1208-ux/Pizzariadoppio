@@ -73,13 +73,14 @@
   const baseFee=Number(cfg.delivery?.minFee)||5;
   const extraFee=Number(cfg.delivery?.extraKmFee ?? 0);
   const displayKm=n=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2}).format(n);
-  const shipping={status:'idle',address:null,quote:null,message:'',requestId:0};
+  const shipping={status:'idle',address:null,quote:null,message:'',requestId:0,outsideEligible:false,customerCourier:false,outsideKm:null};
+  const customerCourier=()=>shipping.status==='outside'&&shipping.outsideEligible&&shipping.customerCourier;
   let lookupTimer=null, quoteTimer=null;
   const validNumber=()=>/^[0-9]{1,6}[a-zA-Z]?$/.test(form.numero.trim());
   const phoneDigits=()=>form.phone.replace(/\D/g,'');
   const cepDigits=()=>form.cep.replace(/\D/g,'');
   const invalidateQuote=()=>{
-    shipping.quote=null;shipping.message='';
+    shipping.quote=null;shipping.message='';shipping.outsideEligible=false;shipping.customerCourier=false;shipping.outsideKm=null;
     shipping.requestId++;
   };
   const halfChoices=products.filter(p=>isHalfEligible(p)&&!isSweet(p));
@@ -135,15 +136,15 @@
     const subtotal=cart.reduce((sum,item)=>sum+(itemPrice(item)??0)*item.qty,0);
     const fee=shipping.status==='ready' ? shipping.quote?.fee : null;
     const km=shipping.status==='ready' ? shipping.quote?.distanceKm : null;
-    const total=cart.length&&!pending&&!customized&&validPrice(fee)?subtotal+fee:null;
-    return {count,pending,customized,subtotal,fee,total,km,outOfArea:shipping.status==='outside'};
+    const total=cart.length&&!pending&&!customized&&(customerCourier()||validPrice(fee))?subtotal+(customerCourier()?0:fee):null;
+    return {count,pending,customized,subtotal,fee,total,km:customerCourier()?shipping.outsideKm:km,outOfArea:shipping.status==='outside',customerCourier:customerCourier()};
   }
   function shippingPreview(){
     if(shipping.status==='ready')return 'Frete estimado pelo CEP: '+money(shipping.quote.fee)+' · rota de referência: '+displayKm(shipping.quote.distanceKm)+' km.';
     if(shipping.status==='loading-cep')return 'Buscando endereço do CEP...';
     if(shipping.status==='calculating')return 'Calculando rota pelas ruas...';
     // O cálculo usa a rua de referência do CEP, sem confirmação em mapa.
-    if(shipping.status==='outside')return 'Fora da área de entrega de até '+maxKm+' km.';
+    if(shipping.status==='outside')return shipping.outsideEligible?'Este CEP ultrapassa o limite de '+maxKm+' km. Você pode optar por contratar o transporte por sua conta.':(shipping.message||'Endereço fora da região atendida.');
     if(shipping.status==='error')return shipping.message||'Não foi possível calcular o frete. Tente novamente.';
     if(!shipping.address)return 'Digite seu CEP para preencher a rua automaticamente.';
     return 'Calcularemos automaticamente o frete para esse CEP.';
@@ -158,12 +159,15 @@
       el.classList.toggle('delivery-success',shipping.status==='ready');
     });
     document.querySelectorAll('[data-delivery-pending]').forEach(el=>{
-      el.textContent=shipping.status==='ready'
+      el.textContent=customerCourier()?'O valor inclui somente as pizzas. O cliente contrata e paga o transporte, após combinar a retirada com a Doppio.':shipping.status==='ready'
         ? 'Frete estimado pela rua do CEP. Confira o endereço: o valor pode variar. Alterações de ingredientes são confirmadas no WhatsApp.'
         : 'Digite o CEP para consultar o frete automaticamente. O número é usado só para identificar a entrega.';
     });
-    document.querySelectorAll('[data-delivery-fee]').forEach(el=>{el.textContent=shipping.status==='outside'?'Fora da área':validPrice(t.fee)?money(t.fee):'A calcular';});
-    document.querySelectorAll('[data-delivery-label]').forEach(el=>{el.textContent=validPrice(t.fee)?'Frete pelo CEP (estimado)':'Taxa de entrega';});
+    document.querySelectorAll('[data-outside-courier-box]').forEach(el=>{el.hidden=!(shipping.status==='outside'&&shipping.outsideEligible);});
+    document.querySelectorAll('[data-courier-consent]').forEach(el=>{el.checked=customerCourier();});
+    document.querySelectorAll('[data-delivery-fee]').forEach(el=>{el.textContent=t.customerCourier?'Contratado pelo cliente':shipping.status==='outside'?'Fora da área':validPrice(t.fee)?money(t.fee):'A calcular';});
+    document.querySelectorAll('[data-delivery-label]').forEach(el=>{el.textContent=t.customerCourier?'Transporte (à parte)':validPrice(t.fee)?'Frete pelo CEP (estimado)':'Taxa de entrega';});
+    document.querySelectorAll('[data-order-total-label]').forEach(el=>{el.textContent=t.customerCourier?'Total das pizzas (sem transporte)':'Total estimado';});
     document.querySelectorAll('[data-order-total]').forEach(el=>{el.textContent=t.total===null?'A confirmar':money(t.total);});
     document.querySelectorAll('[data-calc-frete]').forEach(el=>{
       el.disabled=!shipping.address||shipping.status==='calculating';
@@ -197,7 +201,7 @@
       toast('Informe um CEP válido para calcular o frete.');return;
     }
     const requestId=++shipping.requestId;
-    shipping.status='calculating';shipping.quote=null;shipping.message='';
+    shipping.status='calculating';shipping.quote=null;shipping.message='';shipping.outsideEligible=false;shipping.customerCourier=false;shipping.outsideKm=null;
     updateDeliveryLive();
     try{
       const response=await fetch('/api/frete',{
@@ -209,6 +213,7 @@
       if(!response.ok||!data.ok){
         shipping.message=data.message||'Não foi possível calcular o frete para esse CEP.';
         shipping.status=data.code==='outside_area'||data.code==='outside_state'?'outside':'error';
+        shipping.outsideEligible=data.code==='outside_area';shipping.outsideKm=Number.isFinite(data.distanceKm)&&data.distanceKm>maxKm?data.distanceKm:null;
         updateDeliveryLive();return;
       }
       if(!Number.isFinite(data.fee)||!Number.isFinite(data.distanceKm))throw new Error('Resposta de distância inválida.');
@@ -226,7 +231,7 @@
     const summary=cart.length?`<div class="cart-line"></div>
       <div class="summary-row"><span>${s.pending?'Parcial dos sabores com preço':s.customized?'Subtotal base estimado':'Subtotal'}</span><strong>${s.pending&&!s.subtotal?'A confirmar':money(s.subtotal)}</strong></div>
       <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete pelo CEP (estimado)':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':validPrice(s.fee)?money(s.fee):'A calcular'}</strong></div>
-      <div class="summary-row summary-total"><span>Total estimado</span><strong data-order-total>${s.total===null?'A confirmar':money(s.total)}</strong></div>
+      <div class="summary-row summary-total"><span data-order-total-label>Total estimado</span><strong data-order-total>${s.total===null?'A confirmar':money(s.total)}</strong></div>
       <div class="cart-pending" data-delivery-pending>${shipping.status==='ready'?'Frete estimado pelo CEP. Valores sujeitos à conferência do endereço e alterações de ingredientes.':'Informe o CEP para consultar o frete automático.'}</div>`:'';
     const promoNotice=promoEligible()?'<p class="cart-pending" role="note">🎁 Promoção ativa: 1 refrigerante grátis na compra de 2 pizzas. Confirme o brinde no WhatsApp.</p>':'';
     const fields=cart.length?`<form class="order-form" onsubmit="return false">
@@ -241,6 +246,11 @@
         <input id="{prefix}-cep" data-field="cep" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" value="${esc(form.cep)}" required>
         <p class="delivery-address-result" data-delivery-address>${esc(form.address||'O endereço será preenchido após consultar o CEP.')}</p>
         <p class="delivery-estimate ${shipping.status==='outside'||shipping.status==='error'?'delivery-warning':''}" data-delivery-preview aria-live="polite">${esc(shippingPreview())}</p>
+        <div class="outside-courier-choice" data-outside-courier-box hidden>
+          <strong>Acima de ${maxKm} km: transporte por conta do cliente</strong>
+          <p>Seu endereço está fora da nossa área de entrega. Se desejar continuar, você poderá contratar e pagar um serviço de transporte por aplicativo de sua preferência (como Uber, quando disponível). Combine a retirada previamente com a Doppio Pizzas. A pizzaria não contrata nem cobra o transporte.</p>
+          <label class="outside-courier-optin"><input type="checkbox" data-courier-consent> <span>Quero prosseguir e me responsabilizo por contratar e pagar o transporte após a confirmação da pizzaria.</span></label>
+        </div>
         <button type="button" data-calc-frete class="delivery-calc-button">Recalcular frete</button>
         <p class="delivery-rule">Até ${baseKm} km: ${money(baseFee)} · Após ${baseKm} km: +${money(extraFee)} por km adicional iniciado · Limite de ${maxKm} km.</p>
         <p class="delivery-hint">A distância é estimada pela rua de referência do CEP e pode variar conforme o número da casa. Não é necessário marcar no mapa.</p>
@@ -400,8 +410,8 @@
     if(cepDigits().length!==8){toast('Informe um CEP válido.');focusMissing('cep');return;}
     if(!validNumber()){toast('Informe o número da residência.');focusMissing('numero');return;}
     if(!shipping.address||!form.address.trim()){toast('Aguarde a consulta do CEP.');focusMissing('cep');return;}
-    if(shipping.status==='outside'){toast('CEP fora da área estimada de entrega. Consulte a pizzaria.');focusMissing('cep');return;}
-    if(shipping.status!=='ready' && shipping.status!=='error'){toast('Aguarde o cálculo do frete.');focusMissing('cep');return;}
+    if(shipping.status==='outside'&&!customerCourier()){toast(shipping.outsideEligible?'Marque a opção de transporte por sua conta para continuar.':'Endereço fora da região atendida. Consulte a pizzaria.');focusMissing('cep');return;}
+    if(shipping.status!=='ready' && shipping.status!=='error' && !customerCourier()){toast('Aguarde o cálculo do frete.');focusMissing('cep');return;}
     openCheckoutReview();
   }
   async function sendOrderWhatsApp(){
@@ -423,7 +433,8 @@
           ? {type:'half',a:i.a,b:i.b,qty:i.qty,note:i.note||''}
           : {type:'pizza',id:i.id,qty:i.qty,note:i.note||''}),
         shippingFee:shipping.status==='ready'&&validPrice(shipping.quote?.fee)?shipping.quote.fee:null,
-        distanceKm:shipping.status==='ready'&&validPrice(shipping.quote?.distanceKm)?shipping.quote.distanceKm:null
+        distanceKm:customerCourier()?shipping.outsideKm:shipping.status==='ready'&&validPrice(shipping.quote?.distanceKm)?shipping.quote.distanceKm:null,
+        deliveryMode:customerCourier()?'customer_courier':'store_delivery',customerCourierConsent:customerCourier()
       };
       const response=await fetch('/api/order',{method:'POST',credentials:'same-origin',cache:'no-store',
         headers:{'content-type':'application/json'},body:JSON.stringify(snapshot)});
