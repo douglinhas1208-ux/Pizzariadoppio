@@ -341,8 +341,8 @@
   // O preço de revisão é apenas referência quando existe personalização.
   function reviewHTML(){
     const stats=totals();
-    const baseTotal=!stats.pending&&validPrice(stats.fee)
-      ? Math.round((stats.subtotal+stats.fee)*100)/100 : null;
+    const baseTotal=!stats.pending&&(stats.customerCourier||validPrice(stats.fee))
+      ? Math.round((stats.subtotal+(stats.customerCourier?0:stats.fee))*100)/100 : null;
     const hasChanges=stats.customized;
     const list=cart.map(item=>{
       const p=itemPrice(item);
@@ -359,12 +359,13 @@
       </div>`;
     }).join('');
     const address=[form.address,'nº '+form.numero.trim(),form.complemento.trim(), 'CEP '+form.cep.trim()].filter(Boolean).join(' · ');
-    const feeLabel=shipping.status==='ready'&&validPrice(stats.fee)
+    const feeLabel=stats.customerCourier?'Contratado e pago pelo cliente <small>(não incluído)</small>':shipping.status==='ready'&&validPrice(stats.fee)
       ? money(stats.fee)+' <small>(estimado pelo CEP)</small>' : 'A confirmar no WhatsApp';
     const warnings=[
       hasChanges?'As alterações de ingredientes podem gerar acréscimos. O valor exibido é o preço base.':'',
       stats.pending?'Algumas pizzas estão com preço pendente de confirmação.':'',
-      shipping.status!=='ready'?'Não foi possível calcular o frete agora. A pizzaria confirmará o valor antes de aceitar o pedido.':''
+      stats.customerCourier?'Endereço acima de 5 km. O transporte por aplicativo será contratado e pago pelo cliente, após combinar a retirada com a Doppio Pizzas.':'',
+      shipping.status!=='ready'&&!stats.customerCourier?'Não foi possível calcular o frete agora. A pizzaria confirmará o valor antes de aceitar o pedido.':''
     ].filter(Boolean);
     return `<div class="review-progress"><span class="review-progress-done">1. Dados preenchidos ✓</span><span class="review-progress-active">2. Conferência final</span></div>
       <section class="review-section" aria-label="Pizzas escolhidas">
@@ -377,6 +378,7 @@
         <div class="review-data-pair"><small>Nome</small><strong>${esc(form.name.trim())}</strong></div>
         <div class="review-data-pair"><small>Celular</small><strong>${esc(form.phone.trim())}</strong></div>
         <div class="review-data-pair"><small>Endereço</small><strong>${esc(address)}</strong></div>
+        ${stats.customerCourier?'<div class="review-data-pair"><small>Forma de entrega</small><strong>Transporte por aplicativo contratado e pago pelo cliente, após confirmação da pizzaria.</strong></div>':''}
         <div class="review-data-pair"><small>Pagamento</small><strong>${esc(form.payment)}</strong></div>
         ${form.notes.trim()?`<div class="review-data-pair"><small>Observações</small><strong>${esc(form.notes.trim())}</strong></div>`:''}
       </section>
@@ -384,7 +386,7 @@
         <div class="review-amount-line"><span>Subtotal das pizzas</span><strong>${stats.pending?'A confirmar':money(stats.subtotal)}</strong></div>
         <div class="review-amount-line"><span>Frete</span><strong>${feeLabel}</strong></div>
         <div class="review-amount-line review-grand-total">
-          <span>${hasChanges?'Total base estimado':'Total estimado'}</span>
+          <span>${stats.customerCourier?'Total das pizzas (transporte à parte)':hasChanges?'Total base estimado':'Total estimado'}</span>
           <strong>${baseTotal===null?'A confirmar':money(baseTotal)}</strong>
         </div>
       </section>
@@ -461,7 +463,7 @@
     }
     const stats=totals();
     const when=new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date());
-    const baseTotal=!stats.pending&&validPrice(stats.fee)?Math.round((stats.subtotal+stats.fee)*100)/100:null;
+    const baseTotal=!stats.pending&&(stats.customerCourier||validPrice(stats.fee))?Math.round((stats.subtotal+(stats.customerCourier?0:stats.fee))*100)/100:null;
     const lines=[
       '🍕 *CONSULTA DE PEDIDO — '+cfg.business.name.toUpperCase()+'*',
       ...(reference?['*Código da solicitação: '+reference+'*']:[]),
@@ -476,14 +478,19 @@
       ...(promoEligible()?['🎁 Promoção Doppio: 1 refrigerante grátis na compra de 2 pizzas. Confirmar brinde no atendimento.','']:[]),
       'Subtotal: '+(stats.pending?'a confirmar':money(stats.subtotal)),
       'Distância de referência do CEP: '+(validPrice(stats.km)?displayKm(stats.km)+' km':'a confirmar'),
-      'Frete estimado pelo CEP: '+(validPrice(stats.fee)?money(stats.fee):'a confirmar pela pizzaria'),
-      'Total '+(stats.customized?'base estimado':'estimado')+': '+(baseTotal===null?'a confirmar':money(baseTotal)),'',
+      ...(stats.customerCourier?[
+         '*ENTREGA ACIMA DE 5 KM — TRANSPORTE POR CONTA DO CLIENTE*',
+         'Opção escolhida: contratarei e pagarei por minha conta um serviço de transporte por aplicativo (como Uber, se disponível) após combinar a retirada com a Doppio Pizzas.',
+         'O transporte não será contratado nem cobrado pela pizzaria. Seu custo não está incluído no total das pizzas.',
+         'Transporte: por minha conta, sem taxa de entrega da pizzaria'
+       ]:['Frete estimado pelo CEP: '+(validPrice(stats.fee)?money(stats.fee):'a confirmar pela pizzaria')]),
+      'Total '+(stats.customerCourier?'das pizzas (transporte à parte)':stats.customized?'base estimado':'estimado')+': '+(baseTotal===null?'a confirmar':money(baseTotal)),'',
       '*Cliente:* '+form.name.trim(),
       '*Celular:* '+form.phone.trim(),
       '*Endereço:* '+form.address+', nº '+form.numero.trim()+(form.complemento.trim()?', '+form.complemento.trim():'')+' · CEP '+form.cep.trim(),
       '*Pagamento:* '+form.payment,
       '*Observações gerais:* '+(form.notes.trim()||'Nenhuma'), '',
-      '_Envie esta mensagem para a Doppio Pizzas confirmar disponibilidade, frete, valor final e prazo antes de aceitar o pedido._'
+      stats.customerCourier?'_Solicito confirmação de disponibilidade e horário de retirada para contratar o transporte por minha conta. A pizzaria ainda precisa aceitar o pedido._':'_Envie esta mensagem para a Doppio Pizzas confirmar disponibilidade, frete, valor final e prazo antes de aceitar o pedido._'
     ];
     const link=whatsapp(lines.join('\n'));
     if(tab&&!tab.closed)tab.location.href=link;
@@ -557,7 +564,10 @@
     }
   };
   document.addEventListener('input',updateField);
-  document.addEventListener('change',event=>{if(event.target.dataset?.field==='payment'){form.payment=event.target.value;checkoutKey=null;}});
+  document.addEventListener('change',event=>{
+    if(event.target.matches('[data-courier-consent]')){shipping.customerCourier=shipping.status==='outside'&&shipping.outsideEligible&&event.target.checked;checkoutKey=null;updateDeliveryLive();return;}
+    if(event.target.dataset?.field==='payment'){form.payment=event.target.value;checkoutKey=null;}
+  });
   $('header-cart').addEventListener('click',()=>openDialog('cart-drawer'));
   $('mobile-cart-button').addEventListener('click',()=>openDialog('cart-drawer'));
   $('close-drawer').addEventListener('click',closeDialogs);
@@ -601,7 +611,7 @@
   $('menu-description').textContent=cfg.business.draft?`Conheça nossos ${products.length} sabores iniciais${halfEnabled?' e monte uma pizza meio a meio':''}. Em breve, mais novidades.`:`Escolha nossos ${products.length} sabores${halfEnabled?' ou monte uma pizza meio a meio':''}. Envie seu pedido pelo WhatsApp.`;
   $('year').textContent=new Date().getFullYear();
   $('open-days').textContent=cfg.business.openDays + (cfg.business.openHours?' · '+cfg.business.openHours:' · Horários a confirmar');
-  $('delivery-details').textContent=`Até ${maxKm} km · Frete a partir de ${money(baseFee)}`;
+  $('delivery-details').textContent=`Até ${maxKm} km · Frete a partir de ${money(baseFee)} · Acima disso, transporte contratado pelo cliente mediante combinação`;
   $('payments').textContent=(cfg.business.paymentMethods||[]).join(' · ')||'A confirmar';
   $('draft-note').hidden=!cfg.business.draft;
   // Cada opção meio a meio é mostrada somente quando há duas metades elegíveis do mesmo tipo.
