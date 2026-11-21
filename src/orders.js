@@ -116,11 +116,21 @@ function validateOrder(input,shop){
     return {type:item.type,name,qty:item.qty,note,unitCents,itemCents};
   });
   let shippingCents=null,distanceKm=null;
+  const customerCourier=input.deliveryMode==='customer_courier';
+  if(input.deliveryMode!==undefined&&!['store_delivery','customer_courier'].includes(input.deliveryMode))throw Error('Forma de entrega inválida.');
+  if(customerCourier){
+    if(input.customerCourierConsent!==true)throw Error('Confirme que você organizará e pagará o transporte por sua conta.');
+    if(input.shippingFee!==null&&input.shippingFee!==undefined)throw Error('O frete da pizzaria não se aplica ao transporte contratado pelo cliente.');
+    if(input.distanceKm!==null&&input.distanceKm!==undefined){
+      if(typeof input.distanceKm!=='number'||!Number.isFinite(input.distanceKm)||input.distanceKm<=5||input.distanceKm>1000)throw Error('Para endereços até 5 km, utilize o frete normal da pizzaria.');
+      distanceKm=Math.ceil(input.distanceKm*100-1e-9)/100;
+    }
+  }
   // Rejeitar distância acima do limite, mesmo se a requisição for alterada.
-  if(input.distanceKm!==null&&input.distanceKm!==undefined &&
+  if(!customerCourier&&input.distanceKm!==null&&input.distanceKm!==undefined &&
      (typeof input.distanceKm!=='number'||!Number.isFinite(input.distanceKm)||input.distanceKm<0||input.distanceKm>5))
     throw Error('Entrega disponível somente até 5 km. Recalcule o CEP.');
-  if(input.shippingFee!==null&&input.shippingFee!==undefined){
+  if(!customerCourier&&input.shippingFee!==null&&input.shippingFee!==undefined){
     if(typeof input.shippingFee!=='number'||!Number.isFinite(input.shippingFee)||
        !Number.isInteger(input.shippingFee)||input.shippingFee<5||input.shippingFee>8)
       throw Error('Frete inválido. Recalcule no carrinho.');
@@ -134,7 +144,7 @@ function validateOrder(input,shop){
   return {
     clientKey:input.clientKey.toLowerCase(),customerName:trim(input.name,70),customerPhone:phone,cep:input.cep,
     address:trim(input.address,230),number:trim(input.number,7),complement:trim(input.complement,65),
-    payment:trim(input.payment,80),notes:trim(input.notes,300),
+    payment:trim(input.payment,80),notes:customerCourier?('[TRANSPORTE POR APLICATIVO CONTRATADO E PAGO PELO CLIENTE APÓS CONFIRMAÇÃO DA PIZZARIA] '+trim(input.notes,210)).trim():trim(input.notes,300),
     items,subtotalCents:sum,shippingCents,
     totalCents:shippingCents===null?null:sum+shippingCents,
     distanceKm,hasCustomization
