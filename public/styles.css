@@ -305,3 +305,7 @@ body.doppio-map-open{overflow:hidden}
 .outside-courier-choice>p{margin:0;font-size:.74rem;line-height:1.55;color:#694b38}
 .order-form .delivery-calculator .outside-courier-optin{display:flex;align-items:flex-start;gap:10px;background:#fff;border:1px solid #efcaad;border-radius:9px;padding:11px;line-height:1.5;font-size:.76rem;cursor:pointer}
 .outside-courier-optin input{width:18px;height:18px;min-width:18px;accent-color:#e76823;margin:1px 0 0;cursor:pointer}
+
+/* Chocolate com Uva: mostrar a pizza inteira, sem cortar a fotografia aprovada. */
+.pizza-card:not(.half-choice-card) .pizza-image:has(>img[src$="chocolate-uva-catalogo.avif"]){background:#a97651}
+.pizza-card:not(.half-choice-card) .pizza-image>img[src$="chocolate-uva-catalogo.avif"]{object-fit:contain;object-position:center}
