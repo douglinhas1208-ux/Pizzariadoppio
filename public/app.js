@@ -14,7 +14,7 @@
   let storeStatus = cfg.business?.storeStatus || (acceptingOrders?'manual':'paused');
   let nextOpening = cfg.business?.nextOpening || null;
   const byId = id => products.find(p => p.id === id);
-  const isSweet=p=>p&&(['chocolate-morango','uva-nevada'].includes(p.id)||String(p.category).toLocaleLowerCase('pt-BR')==='doces');
+  const isSweet=p=>p&&(['chocolate-morango','chocolate-uva','uva-nevada'].includes(p.id)||String(p.category).toLocaleLowerCase('pt-BR')==='doces');
   const isHalfEligible=p=>p&&p.halfAllowed!==false&&validPrice(p.price);
   const sameHalfGroup=(a,b)=>isHalfEligible(a)&&isHalfEligible(b)&&isSweet(a)===isSweet(b);
   const formatPrice = n => validPrice(n) ? money(n) : 'A confirmar';
@@ -108,7 +108,7 @@
     const showSweetHalfCard = sweetHalfEnabled && (filter === 'Todos' || filter === 'Meio a meio' || filter === 'Doces');
     const halfPhoto1 = halfChoices.find(p=>p.id==='brocolis') || halfChoices[0];
     const halfPhoto2 = halfChoices.find(p=>p.id==='mussarela') || halfChoices[1];
-    const sweetPhoto1=sweetChoices.find(p=>p.id==='chocolate-morango')||sweetChoices[0];
+    const sweetPhoto1=sweetChoices.find(p=>p.id==='chocolate-uva')||sweetChoices[0];
     const sweetPhoto2=sweetChoices.find(p=>p.id==='uva-nevada')||sweetChoices[1];
     const halfCard = showHalfCard ? `<article class="pizza-card half-choice-card" id="meio-a-meio-salgado">
       <div class="pizza-image half-pizza-image">
@@ -120,7 +120,7 @@
       <p class="half-card-caption">Somente sabores salgados · preço pela média das metades.</p></div></article>` : '';
     const sweetHalfCard = showSweetHalfCard ? `<article class="pizza-card half-choice-card" id="meio-a-meio-doce">
       <div class="pizza-image half-pizza-image"><div class="half-split-photos"><img src="${esc(sweetPhoto1.image)}" alt="${esc(sweetPhoto1.name)}" loading="lazy"><img src="${esc(sweetPhoto2.image)}" alt="${esc(sweetPhoto2.name)}" loading="lazy"></div><span class="pizza-tag">MEIO A MEIO DOCE</span><span class="half-image-mark" aria-hidden="true">½</span></div>
-      <div class="pizza-body"><span class="pizza-category">PIZZAS DOCES</span><h3>Meio a meio doce</h3><p>Metade Chocolate com Morango, metade Uva Nevada. Sem misturar com salgadas.</p><div class="pizza-bottom">${priceMarkup((sweetPhoto1.price+sweetPhoto2.price)/2)}<button class="add-button half-card-button" data-open-half="doce" type="button" ${acceptingOrders?'':'disabled title="Pedidos pausados"'}>½ Escolher doces</button></div><p class="half-card-caption">Somente doces · ilustrações provisórias até chegar a foto real.</p></div></article>` : '';
+      <div class="pizza-body"><span class="pizza-category">PIZZAS DOCES</span><h3>Meio a meio doce</h3><p>Metade Chocolate com Uva, metade Uva Nevada. Sem misturar com salgadas.</p><div class="pizza-bottom">${priceMarkup((sweetPhoto1.price+sweetPhoto2.price)/2)}<button class="add-button half-card-button" data-open-half="doce" type="button" ${acceptingOrders?'':'disabled title="Pedidos pausados"'}>½ Escolher doces</button></div><p class="half-card-caption">Somente sabores doces · imagens ilustrativas.</p></div></article>` : '';
     $('products').innerHTML = displayed.map(p => `<article class="pizza-card">
       <div class="pizza-image"><img src="${esc(p.image)}" alt="${esc((p.image.endsWith('.svg')||isSweet(p))?'Imagem ilustrativa do sabor '+p.name:'Pizza de '+p.name)}" loading="lazy" decoding="async" width="560" height="390"><span class="pizza-tag">${esc(p.tag||p.category||'Sabor')}</span></div>
       <div class="pizza-body"><span class="pizza-category">${esc(p.category||'Outros')}</span><h3>${esc(p.name)}</h3>

@@ -10,10 +10,11 @@ const COOKIE='doppio_admin';
 const SESSION_SECONDS=8*60*60;
 const enc=new TextEncoder();
 const SWEET_PRODUCTS=[
-  {id:'chocolate-morango',name:'Chocolate com Morango',description:'Pizza doce de chocolate com morangos.',ingredients:['Massa','Chocolate','Morango'],category:'Doces',image:'assets/chocolate-morango-catalogo.avif',price:56.99,available:true,tag:'Doce',halfAllowed:true},
-  {id:'uva-nevada',name:'Uva Nevada (Ninho com Uva)',description:'Pizza doce de creme de Ninho com uvas.',ingredients:['Massa','Creme de Ninho','Uva'],category:'Doces',image:'assets/uva-nevada-catalogo.avif',price:56.99,available:true,tag:'Doce',halfAllowed:true}
+  {id:'chocolate-morango',name:'Chocolate com Morango',description:'Pizza doce de chocolate com morangos.',ingredients:['Massa','Chocolate','Morango'],category:'Doces',image:'assets/chocolate-morango-catalogo.avif',price:56.99,available:false,tag:'Doce',halfAllowed:false},
+  {id:'uva-nevada',name:'Uva Nevada (Ninho com Uva)',description:'Pizza doce de creme de Ninho com uvas.',ingredients:['Massa','Creme de Ninho','Uva'],category:'Doces',image:'assets/uva-nevada-catalogo.avif',price:56.99,available:true,tag:'Doce',halfAllowed:true},
+  {id:'chocolate-uva',name:'Chocolate com Uva',description:'Pizza doce com cobertura de chocolate e uvas verdes.',ingredients:['Massa','Chocolate','Uva verde'],category:'Doces',image:'assets/chocolate-uva-catalogo.avif',price:56.99,available:true,tag:'Doce',halfAllowed:true}
 ];
-const CATALOG_VERSION=6;
+const CATALOG_VERSION=7;
 const SWEET_IDS=new Set(SWEET_PRODUCTS.map(p=>p.id));
 // Metades são agrupadas em doces ou salgadas no checkout e revalidadas no servidor.
 const DEFAULT_STATE={
@@ -205,7 +206,18 @@ async function stateRow(env){
     for(const p of SWEET_PRODUCTS){
       const current=state.products.find(item=>item.id===p.id);
       if(!current)state.products.push({...p});
-      else {if(current.price===54.99||current.price===null)current.price=56.99;current.halfAllowed=true;current.category='Doces';if(p.id==='chocolate-morango'&&current.image==='assets/doce-morango.svg')current.image='assets/chocolate-morango-catalogo.avif';if(p.id==='uva-nevada'&&['assets/doce-uva.svg','assets/uva-nevada-foto-real.avif'].includes(current.image))current.image='assets/uva-nevada-catalogo.avif';}
+      else if(p.id==='chocolate-morango'){
+        // Sabor antigo permanece no histórico do painel, mas deixa de aparecer e de participar do meio a meio.
+        current.available=false;current.halfAllowed=false;
+      }else if(p.id==='chocolate-uva'){
+        current.name=p.name;current.description=p.description;current.ingredients=[...p.ingredients];
+        current.category='Doces';current.image=p.image;current.price=56.99;
+        current.available=true;current.halfAllowed=true;current.tag='Doce';
+      }else {
+        if(current.price===54.99||current.price===null)current.price=56.99;
+        current.halfAllowed=true;current.category='Doces';
+        if(p.id==='uva-nevada'&&['assets/doce-uva.svg','assets/uva-nevada-foto-real.avif'].includes(current.image))current.image='assets/uva-nevada-catalogo.avif';
+      }
     }
     state.catalogVersion=CATALOG_VERSION;
     const nextRevision=row.revision+1;
