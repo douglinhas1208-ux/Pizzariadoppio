@@ -381,6 +381,7 @@
         const localTime=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
         $('orders-live-state').textContent='✓ Sincronizado às '+localTime+' · atualiza a cada 10s';
         $('orders-live-state').classList.remove('offline');
+        if(reportDayKey && reportDayKey!==localReportDay())void loadReports({silent:true});
         if(newCount){
           showNewOrderAlert(newCount);
           toast(newCount===1?'🍕 Nova solicitação recebida!':'🍕 '+newCount+' novas solicitações recebidas!');
@@ -404,7 +405,13 @@
   }
 
 
-  let reportRequest=null;
+  let reportRequest=null,reportDayKey='';
+  function localReportDay(){
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const get=type=>parts.find(p=>p.type===type).value;
+    return get('year')+'-'+get('month')+'-'+get('day');
+  }
+  const reportDate=day=>day.slice(8,10)+'/'+day.slice(5,7)+'/'+day.slice(0,4);
   async function loadReports({silent=false}={}){
     if(reportRequest){
       if(silent)return;
@@ -415,14 +422,46 @@
         const days=Number($('report-days').value)||7;
         const res=await api('reports?days='+days);
         if($('admin-dashboard').hidden||Number($('report-days').value)!==days)return;
-        const totals=res.totals||{};
+        const totals=res.totals||{},today=res.today||{};
+        reportDayKey=res.periodEnd||'';
+        $('report-today-date').textContent='Hoje · '+reportDate(reportDayKey)+' · São Paulo';
+        $('report-today-orders').textContent=Number(today.orders||0);
+        $('report-today-confirmed').textContent=Number(today.confirmed||0);
+        $('report-today-pizzas').textContent=Number(today.pizzasSold||0);
         $('report-orders').textContent=Number(totals.orders||0);
+        $('report-confirmed').textContent=Number(totals.confirmed||0);
+        $('report-pizzas').textContent=Number(totals.pizzasSold||0);
         $('report-completed').textContent=Number(totals.completed||0);
+        $('report-pizzas-completed').textContent=Number(totals.pizzasCompleted||0);
+        $('report-canceled').textContent=Number(totals.canceled||0);
         $('report-received').textContent=orderMoney(Number(totals.receivedCents||0));
         $('report-estimated').textContent=orderMoney(Number(totals.estimatedCents||0));
-        const entries=(res.daily||[]).slice(-14);
-        $('report-chart-label').textContent=days>14?'Até 14 dias com movimento':'Movimento dos últimos '+days+' dias';
-        if(!entries.length){
+        const daily=Array.isArray(res.daily)?res.daily:[];
+        $('report-daily-period').textContent='De '+reportDate(res.periodStart||reportDayKey)+' a '+reportDate(reportDayKey);
+        $('report-daily-body').innerHTML=daily.slice().reverse().map(d=>
+          '<tr'+(d.day===reportDayKey?' class="is-today"':'')+'>'
+            +'<th scope="row">'+esc(reportDate(d.day))+(d.day===reportDayKey?' <small>Hoje</small>':'')+'</th>'
+            +'<td>'+Number(d.orders||0)+'</td>'
+            +'<td>'+Number(d.confirmed||0)+'</td>'
+            +'<td>'+Number(d.pizzasRequested||0)+'</td>'
+            +'<td class="report-daily-sold">'+Number(d.pizzasSold||0)+'</td>'
+            +'<td>'+Number(d.pizzasCompleted||0)+'</td>'
+            +'<td>'+Number(d.pending||0)+'</td>'
+            +'<td>'+Number(d.canceled||0)+'</td>'
+            +'<td>'+esc(orderMoney(Number(d.receivedCents||0)))+'</td></tr>'
+        ).join('')||'<tr><td colspan="9">Nenhum registro encontrado.</td></tr>';
+        $('report-daily-total').innerHTML='<th scope="row">Total do período</th>'
+          +'<td>'+Number(totals.orders||0)+'</td>'
+          +'<td>'+Number(totals.confirmed||0)+'</td>'
+          +'<td>'+Number(totals.pizzasRequested||0)+'</td>'
+          +'<td class="report-daily-sold">'+Number(totals.pizzasSold||0)+'</td>'
+          +'<td>'+Number(totals.pizzasCompleted||0)+'</td>'
+          +'<td>'+Number(totals.pending||0)+'</td>'
+          +'<td>'+Number(totals.canceled||0)+'</td>'
+          +'<td>'+esc(orderMoney(Number(totals.receivedCents||0)))+'</td>';
+        const entries=daily.slice(-14);
+        $('report-chart-label').textContent=days>14?'Últimos 14 dias':'Últimos '+days+' dias';
+        if(!Number(totals.orders||0)){
           $('report-chart').innerHTML='<p class="orders-empty">Nenhum pedido registrado neste período.</p>';
           return;
         }
@@ -438,6 +477,7 @@
       }catch(e){
         if(!silent){
           $('report-chart').innerHTML='<p class="orders-empty">Não foi possível carregar o relatório. Clique em Atualizar.</p>';
+          $('report-daily-body').innerHTML='<tr><td colspan="9">Não foi possível consultar os dados.</td></tr>';
           toast(e.message||'Falha no relatório.',true);
         }
       }
@@ -601,7 +641,7 @@
     if(dirty&&!confirm('Sair sem salvar as alterações?'))return;
     try{await api('logout',{method:'POST',body:'{}'});}catch(_){}
     ordersGeneration++;
-    orders=[];ordersLoaded=false;ordersSignature='';
+    orders=[];ordersLoaded=false;ordersSignature='';reportDayKey='';
     $('orders-live-state').textContent='Atualização automática a cada 10s';
     state=null;dirty=false;screen('admin-login');toast('Você saiu do painel.');
   });

@@ -119,8 +119,8 @@
 
       <section class="admin-panel" id="reports-panel">
         <div class="panel-head">
-          <div><span class="panel-label">02 · RELATÓRIOS</span><h3>Movimento de pedidos</h3>
-          <p>Acompanhe solicitações e pagamentos que você confirmar manualmente.</p></div>
+          <div><span class="panel-label">02 · RELATÓRIOS</span><h3>Vendas e pedidos por dia</h3>
+            <p>Confira separadamente pedidos e pizzas por dia, no horário de São Paulo.</p></div>
           <div class="report-controls">
             <label for="report-days">Período
               <select id="report-days">
@@ -132,17 +132,37 @@
             <button type="button" id="reports-reload" class="admin-button admin-button-muted">↻ Atualizar</button>
           </div>
         </div>
+        <div class="reports-today-heading"><strong>Movimento de hoje</strong><span id="report-today-date">Horário de São Paulo</span></div>
+        <div class="reports-today-grid">
+          <div class="reports-today-card"><small>Solicitações hoje</small><strong id="report-today-orders">0</strong></div>
+          <div class="reports-today-card"><small>Pedidos confirmados hoje</small><strong id="report-today-confirmed">0</strong></div>
+          <div class="reports-today-card featured"><small>Pizzas vendidas hoje</small><strong id="report-today-pizzas">0</strong></div>
+        </div>
         <div class="reports-summary">
-          <div class="reports-summary-item"><small>Solicitações recebidas</small><strong id="report-orders">0</strong></div>
+          <div class="reports-summary-item"><small>Solicitações no período</small><strong id="report-orders">0</strong></div>
+          <div class="reports-summary-item"><small>Pedidos confirmados</small><strong id="report-confirmed">0</strong></div>
+          <div class="reports-summary-item"><small>Pizzas vendidas</small><strong id="report-pizzas">0</strong></div>
           <div class="reports-summary-item"><small>Pedidos concluídos</small><strong id="report-completed">0</strong></div>
+          <div class="reports-summary-item"><small>Pizzas concluídas</small><strong id="report-pizzas-completed">0</strong></div>
+          <div class="reports-summary-item"><small>Cancelados</small><strong id="report-canceled">0</strong></div>
           <div class="reports-summary-item"><small>Recebimento informado</small><strong id="report-received">R$ 0,00</strong></div>
-          <div class="reports-summary-item"><small>Total estimado dos concluídos</small><strong id="report-estimated">R$ 0,00</strong></div>
+          <div class="reports-summary-item"><small>Total estimado concluído</small><strong id="report-estimated">R$ 0,00</strong></div>
+        </div>
+        <div class="report-daily-wrap">
+          <div class="reports-today-heading"><strong>Detalhamento por dia</strong><span id="report-daily-period">Dias de calendário</span></div>
+          <div class="report-daily-scroll">
+            <table class="report-daily-table">
+              <thead><tr><th scope="col">Data</th><th scope="col">Solicitações</th><th scope="col">Pedidos confirmados</th><th scope="col">Pizzas solicitadas</th><th scope="col">Pizzas vendidas</th><th scope="col">Pizzas concluídas</th><th scope="col">Aguardando</th><th scope="col">Cancelados</th><th scope="col">Recebimentos</th></tr></thead>
+              <tbody id="report-daily-body"><tr><td colspan="9">Carregando movimentação...</td></tr></tbody>
+              <tfoot><tr id="report-daily-total"><th scope="row">Total</th><td colspan="8">Carregando...</td></tr></tfoot>
+            </table>
+          </div>
         </div>
         <div class="report-chart-wrap">
-          <div class="report-chart-heading"><strong>Recebimentos registrados por dia</strong><small id="report-chart-label"></small></div>
+          <div class="report-chart-heading"><strong>Recebimentos informados por dia</strong><small id="report-chart-label"></small></div>
           <div class="report-chart" id="report-chart"><p class="orders-empty">Carregando relatório...</p></div>
         </div>
-        <p class="orders-footnote">Valores de recebimento são informados manualmente no pedido e não são verificados por banco ou operadora de cartão. Pedidos concluídos não comprovam pagamento. Cancelamentos e reembolsos devem ser conferidos na sua gestão financeira.</p>
+        <p class="orders-footnote">Os registros são agrupados pela data em que o pedido foi criado no horário de São Paulo. Solicitação não confirmada não é venda. Pizzas vendidas = quantidade nos pedidos em preparo, entrega ou concluídos; novos e cancelados ficam de fora. Uma pizza meio a meio conta como uma unidade. Os recebimentos são informados manualmente e não representam conciliação bancária. O banco conserva registros por até 90 dias.</p>
       </section>
 
       <section class="admin-panel">

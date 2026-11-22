@@ -265,28 +265,52 @@ export async function adminReportsApi(request,env,url){
   if(![7,30,90].includes(days))return bad('period','Selecione 7, 30 ou 90 dias.',422);
   try{
     await ensureOrdersDb(env);
+    // Calendário de São Paulo (UTC-3) em vez de uma janela móvel de horas.
+    const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const get=type=>parts.find(p=>p.type===type).value;
+    const today=get('year')+'-'+get('month')+'-'+get('day');
+    const [year,month,day]=today.split('-').map(Number);
+    const firstDay=new Date(Date.UTC(year,month-1,day-days+1)).toISOString().slice(0,10);
+    const since=Math.floor(Date.parse(firstDay+'T03:00:00Z')/1000);
     const now=Math.floor(Date.now()/1000);
-    const since=now-days*86400;
     const rows=await env.DOPPIO_DB.prepare(
-      "SELECT date(datetime(created_at,'unixepoch','-3 hours')) AS dia, "
-      +"COUNT(*) AS pedidos, SUM(CASE WHEN status='concluido' THEN 1 ELSE 0 END) AS concluidos, "
+      "WITH por_pedido AS ("
+      +"SELECT created_at,status,total_cents,paid_amount_cents,"
+      +"COALESCE((SELECT SUM(CASE WHEN json_type(item.value,'$.qty')='integer' "
+      +"AND CAST(json_extract(item.value,'$.qty') AS INTEGER)>0 "
+      +"THEN CAST(json_extract(item.value,'$.qty') AS INTEGER) ELSE 0 END) "
+      +"FROM json_each(CASE WHEN json_valid(doppio_orders.items_json) "
+      +"THEN doppio_orders.items_json ELSE '[]' END) AS item),0) AS qtd_pizzas "
+      +"FROM doppio_orders WHERE created_at>=? AND created_at<=?) "
+      +"SELECT date(created_at,'unixepoch','-3 hours') AS dia, "
+      +"COUNT(*) AS pedidos, "
+      +"SUM(CASE WHEN status IN ('preparo','entrega','concluido') THEN 1 ELSE 0 END) AS confirmados, "
+      +"SUM(CASE WHEN status='novo' THEN 1 ELSE 0 END) AS aguardando, "
+      +"SUM(CASE WHEN status='concluido' THEN 1 ELSE 0 END) AS concluidos, "
       +"SUM(CASE WHEN status='cancelado' THEN 1 ELSE 0 END) AS cancelados, "
+      +"SUM(qtd_pizzas) AS pizzas_solicitadas, "
+      +"SUM(CASE WHEN status IN ('preparo','entrega','concluido') THEN qtd_pizzas ELSE 0 END) AS pizzas_vendidas, "
+      +"SUM(CASE WHEN status='concluido' THEN qtd_pizzas ELSE 0 END) AS pizzas_concluidas, "
       +"SUM(CASE WHEN status='concluido' THEN COALESCE(total_cents,0) ELSE 0 END) AS estimado_cents, "
       +"SUM(CASE WHEN paid_amount_cents IS NOT NULL THEN paid_amount_cents ELSE 0 END) AS recebido_cents, "
       +"SUM(CASE WHEN paid_amount_cents IS NOT NULL THEN 1 ELSE 0 END) AS pagamentos "
-      +"FROM doppio_orders WHERE created_at>=? GROUP BY dia ORDER BY dia ASC"
-    ).bind(since).all();
-    const daily=(rows.results||[]).map(r=>({
-      day:r.dia,orders:Number(r.pedidos),completed:Number(r.concluidos),
-      canceled:Number(r.cancelados),estimatedCents:Number(r.estimado_cents||0),
+      +"FROM por_pedido GROUP BY dia ORDER BY dia ASC"
+    ).bind(since,now).all();
+    const keys=['orders','confirmed','pending','completed','canceled','pizzasRequested','pizzasSold','pizzasCompleted','estimatedCents','receivedCents','payments'];
+    const grouped=new Map((rows.results||[]).map(r=>[r.dia,{
+      day:r.dia,orders:Number(r.pedidos||0),confirmed:Number(r.confirmados||0),
+      pending:Number(r.aguardando||0),completed:Number(r.concluidos||0),canceled:Number(r.cancelados||0),
+      pizzasRequested:Number(r.pizzas_solicitadas||0),pizzasSold:Number(r.pizzas_vendidas||0),
+      pizzasCompleted:Number(r.pizzas_concluidas||0),estimatedCents:Number(r.estimado_cents||0),
       receivedCents:Number(r.recebido_cents||0),payments:Number(r.pagamentos||0)
-    }));
-    const totals=daily.reduce((o,r)=>({
-      orders:o.orders+r.orders,completed:o.completed+r.completed,canceled:o.canceled+r.canceled,
-      estimatedCents:o.estimatedCents+r.estimatedCents,receivedCents:o.receivedCents+r.receivedCents,
-      payments:o.payments+r.payments
-    }),{orders:0,completed:0,canceled:0,estimatedCents:0,receivedCents:0,payments:0});
-    return json({ok:true,days,daily,totals,
-      note:'Valores recebidos sao confirmados manualmente no painel, sem verificacao bancaria ou comprovacao automatica.'});
+    }]));
+    const daily=Array.from({length:days},(_,i)=>{
+      const d=new Date(Date.UTC(year,month-1,day-days+1+i)).toISOString().slice(0,10);
+      return grouped.get(d)||{day:d,...Object.fromEntries(keys.map(k=>[k,0]))};
+    });
+    const totals=Object.fromEntries(keys.map(k=>[k,daily.reduce((sum,r)=>sum+r[k],0)]));
+    return json({ok:true,days,timezone:'America/Sao_Paulo',periodStart:firstDay,periodEnd:today,
+      today:daily[daily.length-1],daily,totals,
+      note:'Pedidos são agrupados pela data da solicitação. Pizzas vendidas: quantidade em pedidos em preparo, entrega ou concluídos. Novos e cancelados não são vendas.'});
   }catch(_){return bad('database_error','Não foi possível gerar o relatório.',503);}
 }
