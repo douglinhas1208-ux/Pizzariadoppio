@@ -128,3 +128,12 @@ Esta é **atualização periódica (quase em tempo real)**, não uma conexão pu
 - As imagens foram geradas para apresentação e não devem ser descritas como fotos reais dos produtos. Substituir pelos registros reais quando forem disponibilizados.
 - Migração versionada do D1 (catalogVersion 6) atualiza apenas os caminhos anteriores conhecidos e preserva fotografias personalizadas eventualmente enviadas pelo painel.
 - Os valores R$ 56,99 para ambas e o meio a meio doce independente permanecem inalterados.
+
+## Relatório diário de pizzas e pedidos (22/11/2026)
+
+- O painel em /admin mostra cada dia civil de São Paulo nos últimos 7, 30 ou 90 dias, incluindo dias sem movimentação.
+- Solicitações são registros enviados pelo checkout e não equivalem automaticamente a compras.
+- Pedidos confirmados incluem os status preparo, entrega e concluido. Pizzas vendidas somam as quantidades dos itens desses pedidos; novo e cancelado não entram nas vendas.
+- Pizza meio a meio equivale a uma única pizza, de acordo com a quantidade solicitada.
+- A data exibida é a data de criação da solicitação, não a data em que o status foi alterado; alterações posteriores de status podem atualizar a contagem de dias anteriores.
+- A seção mostra resumo de hoje, detalhamento dia a dia, totais do período e recebimentos lançados manualmente. Não altera nem exclui os pedidos históricos.
