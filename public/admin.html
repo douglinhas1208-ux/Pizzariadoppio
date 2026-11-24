@@ -9,6 +9,7 @@
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/admin.css">
   <script src="/admin.js" defer></script>
+  <script src="/admin-inventory.js" defer></script>
   <title>Painel administrativo | Doppio Pizzas</title>
 </head>
 <body>
@@ -62,7 +63,7 @@
 
     <section id="admin-dashboard" hidden>
       <div class="dashboard-toolbar">
-        <div><h2>Visão geral</h2><p>As alterações entram no cardápio quando você clicar em salvar.</p></div>
+        <div><h2>Visão geral</h2><p>As alterações no cardápio entram no ar ao salvar. Estoque e custos são salvos separadamente.</p><a class="stock-jump" href="#inventory-panel">📦 Ir para Estoque e Custos</a></div>
         <button type="button" class="admin-button admin-button-muted" id="logout">Sair da conta <span>↗</span></button>
       </div>
       <div class="stat-grid">
@@ -199,6 +200,95 @@
         <div class="panel-head"><div><span class="panel-label">04 · CARDÁPIO</span><h3>Sabores e preços</h3><p>Edite preços, descrição, ingredientes, imagens disponíveis e estoque.</p></div><button type="button" class="admin-button admin-button-primary add-flavor" id="add-product">+ Novo sabor</button></div>
         <div class="product-manager" id="admin-products" aria-live="polite"></div>
         <p class="product-hint">Envie uma foto JPG, PNG ou WEBP de até 8 MB. O painel compacta a imagem e a armazena no banco D1; depois clique em Salvar alterações para publicá-la no cardápio.</p>
+      </section>
+
+
+      <section class="admin-panel stock-panel" id="inventory-panel" aria-labelledby="stock-title">
+        <div class="panel-head">
+          <div>
+            <span class="panel-label">05 · ESTOQUE E CUSTOS</span>
+            <h3 id="stock-title">Controle de ingredientes e preços de compra</h3>
+            <p>Cadastre insumos, registre entradas e saídas e descubra o custo aproximado de cada pizza.</p>
+          </div>
+          <div class="stock-head-actions">
+            <button type="button" class="admin-button admin-button-muted" id="stock-export">↓ Exportar CSV</button>
+            <button type="button" class="admin-button admin-button-muted" id="stock-refresh">↻ Atualizar</button>
+          </div>
+        </div>
+        <p class="stock-message" id="stock-message" role="status" aria-live="polite">Carregando módulo de estoque…</p>
+        <div id="stock-content" hidden>
+          <div class="stock-metrics">
+            <div><small>Insumos ativos</small><strong id="stock-count">0</strong></div>
+            <div><small>Estoque baixo</small><strong id="stock-low">0</strong></div>
+            <div><small>Valor estimado em estoque</small><strong id="stock-value">R$ 0,00</strong></div>
+          </div>
+          <div class="stock-subsection">
+            <div class="stock-subhead"><h4>1. Cadastrar ingredientes e outros custos</h4><small>Use g, kg, ml, L ou unidade. Registre os preços das embalagens que compra.</small></div>
+            <form id="stock-new-form" class="stock-form">
+              <label>Ingrediente / insumo<input name="name" maxlength="90" placeholder="Ex.: Mussarela, caixa, molho de tomate" required></label>
+              <label>Unidade de controle
+                <select name="unit"><option value="g">Grama (g)</option><option value="kg">Quilo (kg)</option><option value="ml">Mililitro (ml)</option><option value="L">Litro (L)</option><option value="un">Unidade (un)</option></select>
+              </label>
+              <label>Quantidade na embalagem<input name="packQty" type="number" min="0.001" step="0.001" placeholder="Ex.: 1000" required></label>
+              <label>Preço da embalagem (R$)<input name="packPrice" inputmode="decimal" placeholder="Ex.: 35,90" required></label>
+              <label>Estoque inicial<input name="openingQty" type="number" min="0" step="0.001" value="0" required></label>
+              <label>Alerta abaixo de<input name="minimumQty" type="number" min="0" step="0.001" value="0" required></label>
+              <button class="admin-button admin-button-primary stock-primary-action" type="submit">+ Cadastrar insumo</button>
+            </form>
+            <p class="stock-hint">Exemplo: mussarela comprada em pacote de 1 kg por R$ 35,90 → unidade g, embalagem 1000, preço 35,90. Você poderá informar quantas gramas usa em cada pizza.</p>
+          </div>
+          <div class="stock-subsection">
+            <div class="stock-subhead"><h4>2. Seu estoque</h4><small>Preços e valores de custo são estimativas com base na última referência cadastrada.</small></div>
+            <div class="stock-table-scroll">
+              <table class="stock-table">
+                <thead><tr><th>Ingrediente</th><th>Saldo atual</th><th>Mínimo</th><th>Preço embalagem</th><th>Custo/unidade</th><th>Valor do saldo</th><th>Ações</th></tr></thead>
+                <tbody id="stock-items"><tr><td colspan="7">Nenhum ingrediente cadastrado.</td></tr></tbody>
+              </table>
+            </div>
+            <form id="stock-edit-form" class="stock-form stock-edit-box" hidden>
+              <h4 id="stock-edit-title">Editar ingrediente</h4>
+              <input name="id" type="hidden">
+              <label>Nome<input name="name" maxlength="90" required></label>
+              <label>Quantidade por embalagem<input type="number" name="packQty" min="0.001" step="0.001" required></label>
+              <label>Preço da embalagem (R$)<input name="packPrice" inputmode="decimal" required></label>
+              <label>Alerta abaixo de<input type="number" name="minimumQty" min="0" step="0.001" required></label>
+              <label class="stock-check"><input name="active" type="checkbox"> Insumo ativo</label>
+              <button type="submit" class="admin-button admin-button-primary">Salvar ingrediente</button>
+              <button type="button" id="stock-edit-cancel" class="admin-button admin-button-muted">Cancelar</button>
+              <p class="stock-hint">Para corrigir um saldo, registre um ajuste abaixo. O histórico não será apagado.</p>
+            </form>
+          </div>
+          <div class="stock-subsection">
+            <div class="stock-subhead"><h4>3. Entradas, consumo e perdas</h4><small>Cada alteração fica registrada no histórico do estoque.</small></div>
+            <form id="stock-movement-form" class="stock-form">
+              <label>Insumo<select name="ingredientId" id="stock-movement-item" required></select></label>
+              <label>Movimentação<select name="kind"><option value="entrada">Entrada / compra (+)</option><option value="consumo">Uso no preparo (−)</option><option value="perda">Perda / descarte (−)</option><option value="ajuste_mais">Ajuste positivo (+)</option><option value="ajuste_menos">Ajuste negativo (−)</option></select></label>
+              <label>Quantidade<input name="quantity" type="number" min="0.001" step="0.001" placeholder="Ex.: 500" required></label>
+              <label>Observações<input name="notes" maxlength="160" placeholder="Ex.: Nota fiscal, fornecedor"></label>
+              <button type="submit" class="admin-button admin-button-primary stock-primary-action">Registrar movimentação</button>
+            </form>
+            <div class="stock-table-scroll stock-history-scroll">
+              <table class="stock-table"><thead><tr><th>Data</th><th>Insumo</th><th>Operação</th><th>Quantidade</th><th>Observação</th></tr></thead>
+                <tbody id="stock-history"><tr><td colspan="5">Nenhuma movimentação.</td></tr></tbody></table>
+            </div>
+          </div>
+          <div class="stock-subsection">
+            <div class="stock-subhead"><h4>4. Ficha técnica e custo por pizza</h4><small>Defina a quantidade de cada insumo usada na receita de uma pizza inteira.</small></div>
+            <div class="stock-recipe-picker">
+              <label>Pizza do cardápio<select id="stock-recipe-product"></select></label>
+              <button type="button" id="stock-recipe-add" class="admin-button admin-button-muted">+ Adicionar ingrediente</button>
+            </div>
+            <div id="stock-recipe-lines" class="stock-recipe-lines"></div>
+            <div class="stock-recipe-totals">
+              <div><small>Custo de insumos por pizza</small><strong id="stock-recipe-cost">R$ 0,00</strong></div>
+              <div><small>Preço no cardápio</small><strong id="stock-recipe-sale">R$ 0,00</strong></div>
+              <div><small>Margem bruta estimada</small><strong id="stock-recipe-margin">—</strong></div>
+            </div>
+            <button type="button" id="stock-recipe-save" class="admin-button admin-button-primary">Salvar ficha técnica</button>
+            <p class="stock-hint">O cálculo não inclui gás, mão de obra, frete, impostos ou embalagem, a menos que você os cadastre e informe a quantidade usada na ficha. A ficha não muda automaticamente o preço de venda publicado.</p>
+          </div>
+          <p class="orders-footnote">As entradas e saídas são manuais nesta versão. Solicitações de pedido não descontam estoque automaticamente, porque podem ainda não ter sido confirmadas. Cadastre primeiro os preços e quantidades reais; nenhum valor foi inventado.</p>
+        </div>
       </section>
 
       <div class="save-panel">

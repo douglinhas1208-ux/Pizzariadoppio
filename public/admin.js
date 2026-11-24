@@ -505,6 +505,7 @@
     }catch(_){adminPhotos=[];}
     render();
     screen('admin-dashboard');
+    window.dispatchEvent(new Event('doppio:admin-ready'));
     await loadOrders();
     await loadReports();
   }

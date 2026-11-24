@@ -183,3 +183,63 @@
 .report-daily-table .report-daily-sold{font-weight:950;color:#b64d1d}
 .report-daily-table tfoot th,.report-daily-table tfoot td{position:sticky;bottom:0;z-index:2;background:#f6e5d2;font-weight:900;border-top:2px solid #e5c3a3;border-bottom:0}
 @media(max-width:700px){.reports-today-grid{grid-template-columns:1fr 1fr;gap:8px}.reports-today-card{padding:13px}.reports-today-card.featured{grid-column:1/-1}.reports-today-card strong{font-size:1.55rem}.report-daily-wrap{padding:10px}}
+
+
+/* Doppio: estoque e custos - visual integrado ao Admin */
+.stock-jump{display:inline-flex;margin-top:9px;font-size:.78rem;font-weight:850;color:#a84e22;text-decoration:none;border-bottom:1px solid #dc9c72}
+.stock-panel{scroll-margin-top:18px}
+.stock-head-actions{display:flex;gap:8px;flex-wrap:wrap}
+.stock-message{font-size:.77rem;color:#6b604e;background:#faf5ec;border-radius:10px;padding:10px 13px;margin:0 0 16px}
+.stock-message.stock-error{background:#fff0ec;color:#a33d2d}
+.stock-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-bottom:19px}
+.stock-metrics>div,.stock-recipe-totals>div{padding:16px;border:1px solid #e9dccf;background:#fffaf5;border-radius:13px;min-width:0}
+.stock-metrics small,.stock-recipe-totals small{display:block;color:#857367;font-size:.72rem;margin-bottom:5px}
+.stock-metrics strong,.stock-recipe-totals strong{display:block;font-size:1.55rem;font-weight:950;letter-spacing:-.04em;overflow-wrap:anywhere}
+.stock-subsection{border-top:1px solid #eee4da;padding:21px 0 25px}
+.stock-subhead{display:flex;gap:5px;flex-direction:column;margin-bottom:16px}
+.stock-subhead h4{font-size:1.05rem;letter-spacing:-.03em;margin:0;color:#39291e}
+.stock-subhead small{color:#837469;font-size:.76rem}
+.stock-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:12px}
+.stock-form label,.stock-recipe-picker label,.stock-recipe-row label{display:grid;gap:6px;color:#645344;font-size:.76rem;font-weight:800;min-width:0}
+.stock-form input,.stock-form select,.stock-recipe-picker select,.stock-recipe-row input,.stock-recipe-row select{width:100%;min-height:42px;background:#fff;border:1px solid #e0d5c9;padding:10px 11px;border-radius:9px;color:#33261c;font-size:.83rem}
+.stock-form input:focus,.stock-form select:focus,.stock-recipe-picker select:focus,.stock-recipe-row input:focus,.stock-recipe-row select:focus{border-color:#e87e49;box-shadow:0 0 0 3px #f28c4326;outline:0}
+.stock-primary-action{min-height:42px}
+.stock-hint{background:#f9f3eb;border-radius:9px;padding:10px 13px;color:#826f5e;font-size:.75rem;margin:12px 0 0;line-height:1.65}
+.stock-table-scroll{width:100%;overflow-x:auto;border:1px solid #ebded0;border-radius:12px}
+.stock-table{width:100%;border-collapse:collapse;min-width:780px;font-size:.77rem}
+.stock-table th{text-align:left;background:#f8f1e9;color:#725943;white-space:nowrap;font-size:.72rem;padding:12px 11px}
+.stock-table td{padding:11px;border-top:1px solid #f0e9e0;vertical-align:middle}
+.stock-table td small{font-size:.7rem;color:#89786b;display:block;margin-top:2px}
+.stock-table tbody tr:nth-child(even){background:#fffdfb}
+.stock-table .stock-low-row{background:#fff8f0}
+.stock-low-tag{display:inline-block;background:#ffe1d8;color:#ad4a31;border-radius:20px;font-size:.64rem;padding:2px 6px;margin-left:6px;font-weight:800}
+.stock-table-actions{display:flex;gap:7px;flex-wrap:wrap}
+.stock-table-actions button{border:1px solid #e6c9b0;border-radius:8px;background:#fff7ef;color:#995024;font-size:.72rem;font-weight:800;padding:7px 10px;white-space:nowrap}
+.stock-empty{color:#87786d;font-size:.78rem;padding:15px 11px}
+.stock-edit-box{background:#fff9f2;border:1px solid #ecd6c3;border-radius:12px;padding:16px;margin-top:14px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.stock-edit-box[hidden],#stock-content[hidden]{display:none!important}
+.stock-edit-box h4,.stock-edit-box .stock-hint{grid-column:1/-1;margin:0}
+.stock-check{display:flex!important;align-items:center;gap:8px!important}
+.stock-check input{width:19px;height:19px;min-height:0;accent-color:var(--orange)}
+.stock-history-scroll{margin-top:15px}
+.stock-positive{color:#28713c;font-weight:900}
+.stock-negative{color:#ae3d2d!important;font-weight:900}
+.stock-recipe-picker{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin-bottom:15px}
+.stock-recipe-picker label{flex:1;min-width:170px}
+.stock-recipe-lines{display:grid;gap:8px;margin-bottom:14px}
+.stock-recipe-row{border:1px solid #eee1d5;background:#fffaf6;border-radius:11px;padding:12px;display:grid;grid-template-columns:minmax(150px,2fr) minmax(100px,1fr) auto;gap:10px;align-items:end}
+.stock-recipe-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:16px 0}
+.stock-recipe-totals strong{font-size:1.2rem}
+@media(max-width:800px){
+  .stock-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stock-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stock-head-actions{margin-top:10px}
+}
+@media(max-width:600px){
+  .stock-form,.stock-edit-box,.stock-metrics,.stock-recipe-totals{grid-template-columns:1fr}
+  .stock-recipe-row{grid-template-columns:1fr 1fr}
+  .stock-recipe-row>label:first-child{grid-column:1/-1}
+  .stock-recipe-row button{grid-column:1/-1}
+  .stock-head-actions{width:100%}
+  .stock-head-actions .admin-button{flex:1}
+}
