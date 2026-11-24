@@ -243,3 +243,15 @@
   .stock-head-actions{width:100%}
   .stock-head-actions .admin-button{flex:1}
 }
+
+
+/* Corrige largura dos cartões de sabores no Admin em telas pequenas. */
+@media(max-width:600px){
+.flavor-entry{min-width:0;max-width:100%}
+.flavor-top{display:grid;grid-template-columns:59px minmax(0,1fr);align-items:start}
+.flavor-photo{grid-column:1;grid-row:1}
+.flavor-heading{grid-column:2;grid-row:1;min-width:0}
+.flavor-controls{grid-column:1/-1;grid-row:2;display:flex;flex-direction:row;justify-content:flex-start;flex-wrap:wrap;align-items:center;max-width:100%;min-width:0;gap:8px 14px}
+.availability{white-space:normal}
+.flavor-grid{max-width:100%}
+}

@@ -137,3 +137,21 @@ Esta é **atualização periódica (quase em tempo real)**, não uma conexão pu
 - Pizza meio a meio equivale a uma única pizza, de acordo com a quantidade solicitada.
 - A data exibida é a data de criação da solicitação, não a data em que o status foi alterado; alterações posteriores de status podem atualizar a contagem de dias anteriores.
 - A seção mostra resumo de hoje, detalhamento dia a dia, totais do período e recebimentos lançados manualmente. Não altera nem exclui os pedidos históricos.
+
+
+## Gestão de estoque e preços de insumos (24/11/2026)
+
+No **Doppio Admin** existe a seção **05 · Estoque e Custos** e o atalho “📦 Ir para Estoque e Custos”.
+
+- **Cadastro:** informe o nome do insumo, unidade de controle (g, kg, ml, L ou un), quantidade por embalagem, preço da embalagem em reais, saldo inicial e nível mínimo para alerta. O sistema calcula custo unitário e valor estimado do saldo. Nenhum ingrediente ou preço é inventado na primeira abertura.
+- **Preço de compra:** altere preço e tamanho de embalagem em Editar. As unidades de controle permanecem as mesmas depois do cadastro para manter a integridade das movimentações e fichas.
+- **Movimentações:** use Entrada, Consumo, Perda, Ajuste positivo ou Ajuste negativo. Todo ajuste fica no histórico, e não é possível dar saída acima do saldo registrado.
+- **Ficha técnica:** selecione a pizza, adicione insumos ativos e informe quantidade por pizza inteira. O custo se atualiza conforme os preços cadastrados. Mostra o preço de venda que já está no cardápio e a margem bruta estimada, mas não modifica o preço publicado.
+- **Exportar CSV:** salva lista de saldos, preços e estimativas em arquivo que pode ser aberto no Excel.
+- **Escopo:** controle de estoque é manual nesta fase. **Pré-pedidos não geram baixa automática** porque podem nunca ter sido confirmados. No preparo, o operador deve registrar o consumo conforme necessário.
+- **Precisão:** custo e valor de estoque são baseados no preço de referência atual da embalagem, não em custo médio histórico de compras. A margem bruta estimada não inclui custos indiretos (gás, taxa de cartão, transporte, impostos, energia, mão de obra) até estes serem contabilizados à parte.
+- **Persistência:** banco Cloudflare D1 existente, com três tabelas novas: stock_ingredients, stock_movements, stock_recipe. A criação é não destrutiva; não modifica o esquema de pedidos nem o catálogo público.
+- **Privacidade:** operações somente em /api/admin/inventory e subrotas, protegidas pela mesma sessão administrativa. API retorna 401 sem login e verifica Origin nas gravações. A interface pública carrega apenas o código, não os dados.
+- **Falhas de carregamento:** atualize o painel e entre novamente se a sessão expirar. Não apague o banco sem investigar a origem.
+
+Exemplo ilustrativo, **não pré-cadastrado**: pacote de mussarela com 1.000 g por R$ 35,90 → custo R$ 0,0359/g. Se uma pizza usar 200 g, seu custo de mussarela será R$ 7,18.
