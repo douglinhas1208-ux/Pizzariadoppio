@@ -220,5 +220,10 @@ $('stock-export').addEventListener('click',()=>{
   const href=URL.createObjectURL(blob);link.href=href;link.download='doppio-estoque-'+new Date().toISOString().slice(0,10)+'.csv';
   document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(href),3000);
 });
-window.addEventListener('doppio:admin-ready',()=>{void load();});
+window.addEventListener('doppio:admin-ready',()=>{
+  if($('admin-dashboard')?.dataset.view==='stock')void load();
+});
+window.addEventListener('doppio:inventory:visible',()=>{
+  if(!data)void load();
+});
 })();

@@ -110,6 +110,33 @@
     $('connection-state').textContent=id==='admin-dashboard'?'Acesso protegido':id==='admin-login'?'Login protegido':id==='admin-setup'?'Ativação pendente':'Conectando...';
     $('connection-state').classList.toggle('connected',id==='admin-dashboard');
   }
+  function adminViewFromHash(){
+    return ['#estoque','#inventory-panel'].includes(window.location.hash.toLowerCase())?'stock':'main';
+  }
+  function setAdminView(view,options={}){
+    const chosen=view==='stock'?'stock':'main';
+    const dashboard=$('admin-dashboard');
+    dashboard.dataset.view=chosen;
+    document.querySelectorAll('[data-admin-view]').forEach(button=>{
+      const selected=button.dataset.adminView===chosen;
+      button.classList.toggle('active',selected);
+      button.setAttribute('aria-pressed',String(selected));
+    });
+    $('admin-view-title').textContent=chosen==='stock'?'Estoque e Custos':'Visão geral';
+    $('admin-view-description').textContent=chosen==='stock'
+      ?'Controle insumos, preços de compra, movimentações e custos de cada pizza em uma área exclusiva.'
+      :'Gerencie pedidos, preços do cardápio, relatórios e funcionamento.';
+    if(options.updateUrl){
+      const fragment=chosen==='stock'?'#estoque':'#painel';
+      window.history.replaceState(null,'',window.location.pathname+window.location.search+fragment);
+    }
+    if(chosen==='stock'&&!dashboard.hidden)window.dispatchEvent(new Event('doppio:inventory:visible'));
+    if(options.scroll&&!dashboard.hidden)$('admin-nav').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  document.querySelectorAll('[data-admin-view]').forEach(button=>{
+    button.addEventListener('click',()=>setAdminView(button.dataset.adminView,{updateUrl:true,scroll:true}));
+  });
+  window.addEventListener('hashchange',()=>setAdminView(adminViewFromHash()));
   function toast(message,bad=false){
     const el=$('admin-toast');
     el.textContent=message;
@@ -505,6 +532,7 @@
     }catch(_){adminPhotos=[];}
     render();
     screen('admin-dashboard');
+    setAdminView(adminViewFromHash());
     window.dispatchEvent(new Event('doppio:admin-ready'));
     await loadOrders();
     await loadReports();

@@ -255,3 +255,25 @@
 .availability{white-space:normal}
 .flavor-grid{max-width:100%}
 }
+
+
+/* Doppio Admin — abas independentes para a operação e o estoque. */
+.admin-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 24px;scroll-margin-top:16px}
+.admin-nav-tab{display:flex;align-items:center;gap:14px;text-align:left;border:1px solid #e8dacd;border-radius:16px;background:#fff;min-width:0;min-height:86px;padding:16px 19px;box-shadow:0 5px 20px #3e261507;transition:background .15s,border-color .15s,box-shadow .15s}
+.admin-nav-tab:hover{background:#fff9f4;border-color:#e8aa84}
+.admin-nav-tab.active{background:#fff1e5;border-color:#e77638;box-shadow:0 0 0 2px #e7763819}
+.admin-nav-tab .admin-nav-icon{display:grid;place-items:center;width:43px;height:43px;min-width:43px;border-radius:12px;background:#f9ebde;font-size:1.3rem}
+.admin-nav-tab.active .admin-nav-icon{background:#fbd5b6}
+.admin-nav-tab span:last-child{min-width:0}
+.admin-nav-tab strong{display:block;font-size:.95rem;color:#2f231b;line-height:1.25}
+.admin-nav-tab small{display:block;margin-top:5px;color:#857467;font-size:.71rem;line-height:1.35}
+#admin-dashboard[data-view="main"] > #inventory-panel{display:none!important}
+#admin-dashboard[data-view="stock"] > :not(.admin-nav):not(.dashboard-toolbar):not(#inventory-panel){display:none!important}
+#admin-dashboard[data-view="stock"] > #inventory-panel{display:block}
+@media(max-width:600px){
+  .admin-nav{gap:9px;margin-bottom:18px}
+  .admin-nav-tab{padding:12px 10px;gap:8px;min-height:90px;border-radius:12px}
+  .admin-nav-tab .admin-nav-icon{width:31px;height:31px;min-width:31px;font-size:.98rem;border-radius:9px}
+  .admin-nav-tab strong{font-size:.76rem}
+  .admin-nav-tab small{font-size:.62rem}
+}

@@ -61,9 +61,17 @@
       <small>Conexão protegida por sessão segura. Não compartilhe sua senha.</small>
     </section>
 
-    <section id="admin-dashboard" hidden>
+    <section id="admin-dashboard" data-view="main" hidden>
+      <nav class="admin-nav" id="admin-nav" aria-label="Áreas do painel administrativo">
+        <button type="button" class="admin-nav-tab active" data-admin-view="main" aria-pressed="true">
+          <span class="admin-nav-icon" aria-hidden="true">🍕</span><span><strong>Painel principal</strong><small>Pedidos, cardápio e relatórios</small></span>
+        </button>
+        <button type="button" class="admin-nav-tab" data-admin-view="stock" aria-pressed="false">
+          <span class="admin-nav-icon" aria-hidden="true">📦</span><span><strong>Estoque e Custos</strong><small>Ingredientes, preços e fichas técnicas</small></span>
+        </button>
+      </nav>
       <div class="dashboard-toolbar">
-        <div><h2>Visão geral</h2><p>As alterações no cardápio entram no ar ao salvar. Estoque e custos são salvos separadamente.</p><a class="stock-jump" href="#inventory-panel">📦 Ir para Estoque e Custos</a></div>
+        <div><h2 id="admin-view-title">Visão geral</h2><p id="admin-view-description">Gerencie pedidos, preços do cardápio, relatórios e funcionamento.</p></div>
         <button type="button" class="admin-button admin-button-muted" id="logout">Sair da conta <span>↗</span></button>
       </div>
       <div class="stat-grid">
