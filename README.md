@@ -155,3 +155,10 @@ No **Doppio Admin** existe a seção **05 · Estoque e Custos** e o atalho “�
 - **Falhas de carregamento:** atualize o painel e entre novamente se a sessão expirar. Não apague o banco sem investigar a origem.
 
 Exemplo ilustrativo, **não pré-cadastrado**: pacote de mussarela com 1.000 g por R$ 35,90 → custo R$ 0,0359/g. Se uma pizza usar 200 g, seu custo de mussarela será R$ 7,18.
+
+
+### Gestão empresarial — despesas simplificadas (25/11/2026)
+
+No painel administrativo, a aba **Gestão empresarial** possui lançamento rápido de despesas (descrição, valor, categoria, data e pagamento), atalhos de categorias, busca e filtros. O administrador pode corrigir e arquivar despesas. Cada alteração gera auditoria no D1 e o arquivamento não apaga registros. Os valores financeiros permanecem indicativos até conciliação.
+
+A interface e API foram homologadas com dez testes de SQLite em memória e simulação de uso no navegador para adicionar, editar, buscar e excluir. O catálogo e os pedidos operacionais não são alterados pelos lançamentos gerenciais.
