@@ -325,36 +325,96 @@
             <div class="stock-subhead"><h4>Resumo de pedidos do mês</h4><small>Inclui todas as solicitações, mas só considera vendas as que estão em preparo, entrega ou concluídas.</small></div>
             <div id="management-orders" class="mgmt-pills"></div>
           </div>
-          <div class="stock-subsection">
-            <div class="stock-subhead"><h4>Registrar despesa</h4><small>Ingredientes, embalagens, energia, gás e outros gastos, com ou sem pagamento registrado.</small></div>
-            <form class="stock-form" id="management-expense-form">
-              <label>Data da despesa<input type="date" id="management-expense-date" name="date" required></label>
-              <label>Categoria
-                <select name="category" required>
-                  <option value="ingredientes">Ingredientes</option>
-                  <option value="embalagens">Embalagens</option>
-                  <option value="energia">Energia</option>
-                  <option value="gas">Gás</option>
-                  <option value="frete">Transporte</option>
-                  <option value="marketing">Marketing</option>
-                  <option value="manutencao">Manutenção</option>
-                  <option value="aluguel">Aluguel</option>
-                  <option value="taxas">Taxas e tarifas</option>
-                  <option value="outros">Outros</option>
-                </select>
-              </label>
-              <label>Descrição<input name="description" maxlength="160" placeholder="Ex.: Compra de mussarela" required></label>
-              <label>Valor (R$)<input name="amount" inputmode="decimal" placeholder="Ex.: 35,90" required></label>
-              <label>Data de pagamento (opcional)<input type="date" name="paidDate"></label>
-              <button type="submit" class="admin-button admin-button-primary">+ Lançar despesa</button>
-            </form>
-            <p class="stock-hint">Os lançamentos ficam registrados no mês da data da despesa. Despesas ainda não pagas também são consideradas no saldo parcial. Nesta primeira etapa, não há exclusão nem estorno automático: confira os dados antes de lançar.</p>
-            <div class="stock-table-scroll mgmt-expenses-table">
-              <table class="stock-table">
-                <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Pagamento</th></tr></thead>
-                <tbody id="management-expenses"><tr><td colspan="5">Nenhuma despesa informada.</td></tr></tbody>
-              </table>
+          <div class="stock-subsection mgmt-expense-hub" id="management-expense-hub">
+            <div class="mgmt-expense-header">
+              <div>
+                <span class="panel-label">CONTROLE DO DIA A DIA</span>
+                <h4>Minhas despesas</h4>
+                <p>Cadastre uma compra em poucos segundos e corrija seus gastos sempre que precisar.</p>
+              </div>
+              <div class="mgmt-expense-summary" id="management-expense-summary" aria-live="polite"></div>
             </div>
+
+            <form class="mgmt-quick-form" id="management-expense-form">
+              <div class="mgmt-form-head">
+                <strong id="management-expense-form-title">+ Nova despesa</strong>
+                <small id="management-expense-form-help">Ex.: comprei R$ 35,90 de queijo hoje.</small>
+              </div>
+              <div class="mgmt-quick-fields">
+                <label class="mgmt-field-description">O que você comprou?
+                  <input name="description" maxlength="160" placeholder="Ex.: Mussarela, caixas de pizza..." autocomplete="off" required>
+                </label>
+                <label class="mgmt-field-amount">Quanto custou? (R$)
+                  <input name="amount" inputmode="decimal" placeholder="Ex.: 35,90" autocomplete="off" required>
+                </label>
+              </div>
+              <div class="mgmt-category-quick" id="management-category-quick" role="group" aria-label="Categorias rápidas">
+                <button type="button" data-category="ingredientes">🥬 Ingredientes</button>
+                <button type="button" data-category="embalagens">📦 Embalagens</button>
+                <button type="button" data-category="gas">🔥 Gás</button>
+                <button type="button" data-category="energia">💡 Energia</button>
+                <button type="button" data-category="frete">🛵 Entrega</button>
+                <button type="button" data-category="outros">＋ Outros</button>
+              </div>
+              <div class="mgmt-quick-fields mgmt-detail-fields">
+                <label>Categoria
+                  <select name="category" required>
+                    <option value="ingredientes">Ingredientes</option>
+                    <option value="embalagens">Embalagens</option>
+                    <option value="gas">Gás</option>
+                    <option value="energia">Energia</option>
+                    <option value="frete">Entrega e transporte</option>
+                    <option value="marketing">Publicidade</option>
+                    <option value="manutencao">Manutenção</option>
+                    <option value="aluguel">Aluguel</option>
+                    <option value="taxas">Taxas e tarifas</option>
+                    <option value="outros">Outros</option>
+                  </select>
+                </label>
+                <label>Data da compra
+                  <input type="date" id="management-expense-date" name="date" required>
+                </label>
+                <label>Pagamento
+                  <select name="paymentStatus" id="management-expense-payment">
+                    <option value="paid">Já paguei</option>
+                    <option value="pending">Ainda não paguei</option>
+                  </select>
+                </label>
+              </div>
+              <details class="mgmt-paid-details" id="management-payment-details">
+                <summary>O pagamento foi feito em outro dia?</summary>
+                <label>Data em que pagou
+                  <input type="date" name="paidDate" id="management-expense-paid-date">
+                </label>
+              </details>
+              <div class="mgmt-form-actions">
+                <button type="submit" class="admin-button admin-button-primary" id="management-expense-submit">+ Adicionar despesa</button>
+                <button type="button" class="admin-button admin-button-muted" id="management-expense-cancel" hidden>Cancelar edição</button>
+              </div>
+            </form>
+
+            <div class="mgmt-list-head">
+              <div>
+                <h4>Despesas lançadas</h4>
+                <small id="management-expense-count">Escolha o mês para ver os gastos.</small>
+              </div>
+              <div class="mgmt-expense-filters">
+                <label class="mgmt-search-label">Buscar
+                  <input type="search" id="management-expense-search" placeholder="Nome ou categoria" autocomplete="off">
+                </label>
+                <label>Mostrar
+                  <select id="management-expense-filter">
+                    <option value="all">Todas</option>
+                    <option value="paid">Pagas</option>
+                    <option value="pending">Pendentes</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div id="management-expenses" class="mgmt-expense-list" aria-live="polite">
+              <p class="stock-empty">Nenhuma despesa informada.</p>
+            </div>
+            <p class="stock-hint">Você pode editar qualquer lançamento. Ao excluir, ele sai dos totais, mas continua registrado no histórico de auditoria. Isso não altera o estoque nem os pedidos.</p>
           </div>
           <div class="stock-subsection">
             <div class="stock-subhead"><h4>Metas de vendas e produção</h4><small>Metas por mês, considerando operação habitual na sexta, sábado e domingo.</small></div>
