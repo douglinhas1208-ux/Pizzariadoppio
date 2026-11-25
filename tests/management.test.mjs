@@ -130,3 +130,77 @@ test('validação bloqueia valores, datas e metas inválidos',async()=>{
     assert.equal(h.db.prepare('SELECT count(*) AS n FROM doppio_management_expenses').get().n,0);
   }finally{h.close();}
 });
+
+
+test('despesas podem ser editadas sem duplicação, preservando auditoria',async()=>{
+  const h=setup();
+  try{
+    const posted=await h.call('/expenses','POST',{date:'2026-11-20',category:'ingredientes',
+      description:'Tomate',amountCents:1500,paidDate:null});
+    assert.equal(posted.status,201);
+    assert.equal(posted.revision,0);
+    let summary=await h.call('/summary?month=2026-11');
+    assert.equal(summary.expenses.bookedCents,1500);
+    const id=posted.id;
+    const updated=await h.call('/expenses/'+id,'PUT',{expectedRevision:0,date:'2026-11-20',
+      category:'embalagens',description:'Caixas de pizza',amountCents:2500,paidDate:'2026-11-20'});
+    assert.equal(updated.status,200);
+    assert.equal(updated.revision,1);
+    summary=await h.call('/summary?month=2026-11');
+    assert.equal(summary.expenses.bookedCents,2500);
+    assert.equal(summary.expenses.paidCents,2500);
+    assert.equal(summary.expenses.count,1);
+    assert.equal(summary.expenses.rows[0].revision,1);
+    assert.equal(summary.expenses.rows[0].category,'embalagens');
+    const events=h.db.prepare('SELECT action,previous_json,current_json FROM doppio_management_expense_audit WHERE expense_id=? ORDER BY rowid').all(id);
+    assert.deepEqual(events.map(x=>x.action),['created','updated']);
+    assert.equal(JSON.parse(events[1].previous_json).amountCents,1500);
+    assert.equal(JSON.parse(events[1].current_json).amountCents,2500);
+  }finally{h.close();}
+});
+
+test('exclusão lógica retira despesa dos totais, preserva auditoria e não altera pedidos',async()=>{
+  const h=setup();
+  try{
+    h.add('p1',period,'concluido',[1],10000,0,10000,10000);
+    const entry=await h.call('/expenses','POST',{date:'2026-11-20',
+      category:'gas',description:'Botijão de gás',amountCents:12500});
+    assert.equal(entry.status,201);
+    const removed=await h.call('/expenses/'+entry.id,'DELETE',{expectedRevision:0});
+    assert.equal(removed.status,200);
+    assert.equal(removed.archived,true);
+    const summary=await h.call('/summary?month=2026-11');
+    assert.equal(summary.expenses.bookedCents,0);
+    assert.equal(summary.expenses.count,0);
+    assert.equal(summary.sales.ordersTotal,1);
+    assert.equal(h.db.prepare('SELECT COUNT(*) AS n FROM doppio_orders').get().n,1);
+    assert.equal(h.db.prepare('SELECT COUNT(*) AS n FROM doppio_management_expenses').get().n,1);
+    const events=h.db.prepare('SELECT action FROM doppio_management_expense_audit WHERE expense_id=? ORDER BY rowid').all(entry.id);
+    assert.deepEqual(events.map(x=>x.action),['created','archived']);
+    const repeat=await h.call('/expenses/'+entry.id,'DELETE',{expectedRevision:0});
+    assert.equal(repeat.status,404);
+  }finally{h.close();}
+});
+
+test('edição simultânea e valores inválidos são rejeitados sem alterar histórico',async()=>{
+  const h=setup();
+  try{
+    const entry=await h.call('/expenses','POST',{date:'2026-11-19',
+      category:'energia',description:'Conta de energia',amountCents:16000});
+    assert.equal(entry.status,201);
+    const first=await h.call('/expenses/'+entry.id,'PUT',{expectedRevision:0,date:'2026-11-19',
+      category:'energia',description:'Conta corrigida',amountCents:14000});
+    assert.equal(first.status,200);
+    const stale=await h.call('/expenses/'+entry.id,'PUT',{expectedRevision:0,date:'2026-11-19',
+      category:'energia',description:'Valor antigo',amountCents:18000});
+    assert.equal(stale.status,409);
+    const invalid=await h.call('/expenses/'+entry.id,'PUT',{expectedRevision:1,date:'2026-02-30',
+      category:'energia',description:'Data inválida',amountCents:15000});
+    assert.equal(invalid.status,422);
+    const after=await h.call('/summary?month=2026-11');
+    assert.equal(after.expenses.rows[0].description,'Conta corrigida');
+    assert.equal(after.expenses.bookedCents,14000);
+    assert.equal(h.db.prepare('SELECT COUNT(*) AS n FROM doppio_management_expense_audit').get().n,2);
+  }finally{h.close();}
+});
+
