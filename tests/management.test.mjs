@@ -204,3 +204,31 @@ test('edição simultânea e valores inválidos são rejeitados sem alterar hist
   }finally{h.close();}
 });
 
+
+
+test('migração mantém lançamento antigo e permite corrigi-lo',async()=>{
+  const h=setup();
+  try{
+    // Reproduz banco que já tinha despesas antes da versão de edição.
+    h.db.exec(migration);
+    const oldId='33333333-3333-4333-a333-333333333333';
+    h.db.prepare('INSERT INTO doppio_management_expenses(id,expense_date,category,description,amount_cents,paid_at) VALUES (?,?,?,?,?,?)')
+      .run(oldId,'2026-11-18','ingredientes','Compra antiga',7500,null);
+    const before=await h.call('/summary?month=2026-11');
+    assert.equal(before.status,200);
+    assert.equal(before.expenses.count,1);
+    assert.equal(before.expenses.rows[0].revision,0);
+    assert.equal(before.expenses.bookedCents,7500);
+    const change=await h.call('/expenses/'+oldId,'PUT',{
+      expectedRevision:0,date:'2026-11-18',category:'ingredientes',
+      description:'Compra antiga corrigida',amountCents:7000,paidDate:null
+    });
+    assert.equal(change.status,200);
+    const after=await h.call('/summary?month=2026-11');
+    assert.equal(after.expenses.bookedCents,7000);
+    assert.equal(after.expenses.rows[0].description,'Compra antiga corrigida');
+    const audit=h.db.prepare('SELECT action FROM doppio_management_expense_audit WHERE expense_id=?').all(oldId);
+    assert.deepEqual(audit.map(x=>x.action),['updated']);
+    assert.equal(h.db.prepare('SELECT COUNT(*) AS n FROM doppio_management_expenses').get().n,1);
+  }finally{h.close();}
+});
