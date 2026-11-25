@@ -12,8 +12,11 @@ const send=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:
 const fail=(code,message,status=400)=>send({ok:false,code,message},status);
 const categoryNames=new Set(['ingredientes','embalagens','energia','gas','frete','marketing','manutencao','aluguel','taxas','outros']);
 const monthOK=s=>typeof s==='string'&&/^20\d{2}-(0[1-9]|1[0-2])$/.test(s);
-const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&
-  new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;
+const dateOK=s=>{
+  if(typeof s!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;
+  const parsed=Date.parse(s+'T12:00:00Z');
+  return Number.isFinite(parsed)&&new Date(parsed).toISOString().slice(0,10)===s;
+};
 const isCents=(n,zero=false)=>Number.isSafeInteger(n)&&n>=(zero?0:1)&&n<=100000000;
 const isCount=n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000;
 const dayStamp=s=>Math.floor(Date.parse(s+'T12:00:00Z')/1000);
