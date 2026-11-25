@@ -115,10 +115,12 @@
     $('connection-state').classList.toggle('connected',id==='admin-dashboard');
   }
   function adminViewFromHash(){
-    return ['#estoque','#inventory-panel'].includes(window.location.hash.toLowerCase())?'stock':'main';
+    const hash=window.location.hash.toLowerCase();
+    return ['#estoque','#inventory-panel'].includes(hash)?'stock':
+      ['#gestao','#financeiro','#management-panel'].includes(hash)?'management':'main';
   }
   function setAdminView(view,options={}){
-    const chosen=view==='stock'?'stock':'main';
+    const chosen=['stock','management'].includes(view)?view:'main';
     const dashboard=$('admin-dashboard');
     dashboard.dataset.view=chosen;
     document.querySelectorAll('[data-admin-view]').forEach(button=>{
@@ -126,15 +128,18 @@
       button.classList.toggle('active',selected);
       button.setAttribute('aria-pressed',String(selected));
     });
-    $('admin-view-title').textContent=chosen==='stock'?'Estoque e Custos':'Visão geral';
+    $('admin-view-title').textContent=chosen==='stock'?'Estoque e Custos':chosen==='management'?'Gestão empresarial':'Visão geral';
     $('admin-view-description').textContent=chosen==='stock'
       ?'Controle insumos, preços de compra, movimentações e custos de cada pizza em uma área exclusiva.'
+      :chosen==='management'
+      ?'Acompanhe vendas estimadas, despesas e metas mensais. Indicadores financeiros preliminares.'
       :'Gerencie pedidos, preços do cardápio, relatórios e funcionamento.';
     if(options.updateUrl){
-      const fragment=chosen==='stock'?'#estoque':'#painel';
+      const fragment=chosen==='stock'?'#estoque':chosen==='management'?'#gestao':'#painel';
       window.history.replaceState(null,'',window.location.pathname+window.location.search+fragment);
     }
     if(chosen==='stock'&&!dashboard.hidden)window.dispatchEvent(new Event('doppio:inventory:visible'));
+    if(chosen==='management'&&!dashboard.hidden)window.dispatchEvent(new Event('doppio:management:visible'));
     if(options.scroll&&!dashboard.hidden)$('admin-nav').scrollIntoView({behavior:'smooth',block:'start'});
   }
   document.querySelectorAll('[data-admin-view]').forEach(button=>{

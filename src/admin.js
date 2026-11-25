@@ -1,6 +1,7 @@
 import {adminOrdersApi,createOrder,adminReportsApi} from './orders.js';
 import {adminPhotoApi} from './images.js';
 import {inventoryApi} from './inventory.js';
+import {managementApi} from './management.js';
 /*
  * Doppio Admin — API segura (Cloudflare Workers + D1).
  * Nenhuma senha ou chave é mantida no repositório.
@@ -267,6 +268,7 @@ export async function adminApi(request,env,url){
   if(url.pathname==='/api/admin/me'&&request.method==='GET')return j({ok:true,authenticated:true});
   if(url.pathname==='/api/admin/orders'||url.pathname.startsWith('/api/admin/orders/'))return adminOrdersApi(request,env,url);
   if(url.pathname==='/api/admin/reports')return adminReportsApi(request,env,url);
+  if(url.pathname==='/api/admin/management'||url.pathname.startsWith('/api/admin/management/'))return managementApi(request,env,url);
   if(url.pathname==='/api/admin/inventory'||url.pathname.startsWith('/api/admin/inventory/'))return inventoryApi(request,env,url);
   if(url.pathname==='/api/admin/images'||url.pathname.startsWith('/api/admin/images/'))return adminPhotoApi(request,env,url);
   if(url.pathname==='/api/admin/logout'&&request.method==='POST')return j({ok:true},200,{'set-cookie':cookieHeader('',true)});

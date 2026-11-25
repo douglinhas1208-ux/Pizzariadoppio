@@ -277,3 +277,32 @@
   .admin-nav-tab strong{font-size:.76rem}
   .admin-nav-tab small{font-size:.62rem}
 }
+
+
+/* Terceira aba: gestão empresarial em ambiente de desenvolvimento. */
+.admin-nav{grid-template-columns:repeat(3,minmax(0,1fr))}
+#admin-dashboard[data-view="main"] > #management-panel,
+#admin-dashboard[data-view="stock"] > #management-panel{display:none!important}
+#admin-dashboard[data-view="management"] > :not(.admin-nav):not(.dashboard-toolbar):not(#management-panel){display:none!important}
+#admin-dashboard[data-view="management"] > #management-panel{display:block}
+.mgmt-month-row{display:flex;align-items:center;gap:14px;margin:5px 0 16px;flex-wrap:wrap}
+.mgmt-month-row label{font-size:.8rem;font-weight:800;color:#6b5747}
+.mgmt-month-row input{height:41px;padding:8px 12px;border:1px solid #dccbbb;background:white;border-radius:9px;font-size:.9rem}
+.mgmt-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:18px 0 16px}
+.mgmt-metric{padding:15px;background:#fffaf4;border:1px solid #ead9c5;border-radius:12px;min-width:0;display:flex;flex-direction:column;gap:5px}
+.mgmt-metric span{font-weight:850;color:#725a47;font-size:.76rem}
+.mgmt-metric strong{font-size:clamp(1.08rem,2.2vw,1.65rem);font-weight:950;letter-spacing:-.035em;overflow-wrap:anywhere}
+.mgmt-metric small{font-size:.68rem;color:#887667;line-height:1.45}
+.mgmt-caution{padding:13px 16px;border-left:4px solid #cd7d42;background:#fdf1e5;border-radius:8px;font-size:.76rem;line-height:1.6;color:#77533a}
+.mgmt-alert{padding:13px 15px;background:#fff0ed;border:1px solid #f0c0b6;border-radius:10px;color:#a13a2a;font-size:.79rem;font-weight:800}
+.mgmt-alert[hidden],#management-content[hidden]{display:none!important}
+.mgmt-pills{display:flex;gap:9px;flex-wrap:wrap}
+.mgmt-pills span{display:flex;gap:5px;align-items:center;background:#f9f1e6;border:1px solid #eee0ce;border-radius:9px;padding:9px 12px;font-size:.77rem;color:#6a5443}
+.mgmt-pills b{color:#31251c}
+.mgmt-expenses-table{margin-top:14px}
+@media(max-width:700px){
+ .admin-nav{display:flex;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory}
+ .admin-nav-tab{flex:0 0 min(61vw,235px);scroll-snap-align:start}
+ .mgmt-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:450px){.mgmt-metrics{grid-template-columns:1fr 1fr;gap:8px}.mgmt-metric{padding:12px}}

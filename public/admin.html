@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/admin.css">
   <script src="/admin.js" defer></script>
   <script src="/admin-inventory.js" defer></script>
+  <script src="/admin-management.js" defer></script>
   <title>Painel administrativo | Doppio Pizzas</title>
 </head>
 <body>
@@ -68,6 +69,9 @@
         </button>
         <button type="button" class="admin-nav-tab" data-admin-view="stock" aria-pressed="false">
           <span class="admin-nav-icon" aria-hidden="true">📦</span><span><strong>Estoque e Custos</strong><small>Ingredientes, preços e fichas técnicas</small></span>
+        </button>
+        <button type="button" class="admin-nav-tab" data-admin-view="management" aria-pressed="false">
+          <span class="admin-nav-icon" aria-hidden="true">📊</span><span><strong>Gestão empresarial</strong><small>Vendas, despesas e metas</small></span>
         </button>
       </nav>
       <div class="dashboard-toolbar">
@@ -296,6 +300,73 @@
             <p class="stock-hint">O cálculo não inclui gás, mão de obra, frete, impostos ou embalagem, a menos que você os cadastre e informe a quantidade usada na ficha. A ficha não muda automaticamente o preço de venda publicado.</p>
           </div>
           <p class="orders-footnote">As entradas e saídas são manuais nesta versão. Solicitações de pedido não descontam estoque automaticamente, porque podem ainda não ter sido confirmadas. Cadastre primeiro os preços e quantidades reais; nenhum valor foi inventado.</p>
+        </div>
+      </section>
+
+
+      <section class="admin-panel management-panel" id="management-panel" aria-labelledby="mgmt-title">
+        <div class="panel-head">
+          <div><span class="panel-label">GESTÃO EMPRESARIAL · EM TESTES</span>
+            <h3 id="mgmt-title">Financeiro e indicadores da Doppio</h3>
+            <p>Visão mensal para administrar vendas, despesas e metas, sem alterar os pedidos originais.</p>
+          </div>
+          <button class="admin-button admin-button-muted" id="management-refresh" type="button">↻ Atualizar</button>
+        </div>
+        <div class="mgmt-month-row">
+          <label for="management-month">Mês de referência</label>
+          <input type="month" id="management-month" min="2020-01" max="2099-12" required>
+        </div>
+        <p id="management-status" class="stock-message" role="status" aria-live="polite">Carregando gestão empresarial…</p>
+        <div id="management-content" hidden>
+          <div id="management-metrics" class="mgmt-metrics"></div>
+          <p class="mgmt-caution"><strong>Importante:</strong> vendas estimadas não são necessariamente pagamentos recebidos. O saldo parcial não é lucro líquido: ainda faltam conciliações de ingredientes, tributos, taxas, estornos e outras despesas.</p>
+          <div id="management-alert" class="mgmt-alert" role="alert" hidden></div>
+          <div class="stock-subsection">
+            <div class="stock-subhead"><h4>Resumo de pedidos do mês</h4><small>Inclui todas as solicitações, mas só considera vendas as que estão em preparo, entrega ou concluídas.</small></div>
+            <div id="management-orders" class="mgmt-pills"></div>
+          </div>
+          <div class="stock-subsection">
+            <div class="stock-subhead"><h4>Registrar despesa</h4><small>Ingredientes, embalagens, energia, gás e outros gastos, com ou sem pagamento registrado.</small></div>
+            <form class="stock-form" id="management-expense-form">
+              <label>Data da despesa<input type="date" id="management-expense-date" name="date" required></label>
+              <label>Categoria
+                <select name="category" required>
+                  <option value="ingredientes">Ingredientes</option>
+                  <option value="embalagens">Embalagens</option>
+                  <option value="energia">Energia</option>
+                  <option value="gas">Gás</option>
+                  <option value="frete">Transporte</option>
+                  <option value="marketing">Marketing</option>
+                  <option value="manutencao">Manutenção</option>
+                  <option value="aluguel">Aluguel</option>
+                  <option value="taxas">Taxas e tarifas</option>
+                  <option value="outros">Outros</option>
+                </select>
+              </label>
+              <label>Descrição<input name="description" maxlength="160" placeholder="Ex.: Compra de mussarela" required></label>
+              <label>Valor (R$)<input name="amount" inputmode="decimal" placeholder="Ex.: 35,90" required></label>
+              <label>Data de pagamento (opcional)<input type="date" name="paidDate"></label>
+              <button type="submit" class="admin-button admin-button-primary">+ Lançar despesa</button>
+            </form>
+            <p class="stock-hint">Os lançamentos ficam registrados no mês da data da despesa. Despesas ainda não pagas também são consideradas no saldo parcial. Nesta primeira etapa, não há exclusão nem estorno automático: confira os dados antes de lançar.</p>
+            <div class="stock-table-scroll mgmt-expenses-table">
+              <table class="stock-table">
+                <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Pagamento</th></tr></thead>
+                <tbody id="management-expenses"><tr><td colspan="5">Nenhuma despesa informada.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="stock-subsection">
+            <div class="stock-subhead"><h4>Metas de vendas e produção</h4><small>Metas por mês, considerando operação habitual na sexta, sábado e domingo.</small></div>
+            <form class="stock-form" id="management-goal-form">
+              <label>Meta de faturamento (R$)<input name="revenue" inputmode="decimal" value="0,00" required></label>
+              <label>Meta de lucro líquido (R$)<input name="profit" inputmode="decimal" value="0,00" required></label>
+              <label>Meta de pizzas vendidas<input name="pizzas" type="number" min="0" max="1000000" step="1" value="0" required></label>
+              <button type="submit" class="admin-button admin-button-primary">Salvar metas do mês</button>
+            </form>
+            <p id="management-goal-progress" class="stock-hint">Aguardando informações do período.</p>
+            <p class="stock-hint">A meta de lucro é armazenada, mas seu progresso só poderá ser avaliado depois que custos e recebimentos estiverem conciliados.</p>
+          </div>
         </div>
       </section>
 
