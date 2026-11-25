@@ -13,7 +13,7 @@ const migration=readFileSync(new URL('../migrations/management-draft.sql',import
 const reference='https://localhost/api/admin/management';
 function setup(){
   const db=new DatabaseSync(':memory:');
-  db.exec('CREATE TABLE doppio_orders (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,status TEXT NOT NULL,items_json TEXT NOT NULL,subtotal_cents INTEGER NOT NULL,shipping_cents INTEGER,total_cents INTEGER,paid_amount_cents INTEGER);');
+  db.exec('CREATE TABLE doppio_orders (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,status TEXT NOT NULL,items_json TEXT NOT NULL,subtotal_cents INTEGER NOT NULL,shipping_cents INTEGER,total_cents INTEGER,paid_amount_cents INTEGER,ip_key TEXT NOT NULL DEFAULT \'\');');
   const prep=(sql,values=[])=>({
     bind(...args){return prep(sql,args);},
     first:async()=>db.prepare(sql).get(...values)||null,

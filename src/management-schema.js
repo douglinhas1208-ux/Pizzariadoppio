@@ -9,15 +9,17 @@ const definitions=[
   "CREATE TRIGGER IF NOT EXISTS doppio_management_order_update AFTER UPDATE ON doppio_orders BEGIN\n INSERT INTO doppio_management_sales(order_id,order_created_at,last_order_update_at,status,pizza_quantity,subtotal_cents,shipping_cents,total_cents,paid_amount_cents) SELECT NEW.id,NEW.created_at,NEW.updated_at,NEW.status,COALESCE((SELECT SUM(CASE WHEN json_type(item.value,'$.qty')='integer' AND CAST(json_extract(item.value,'$.qty') AS INTEGER)>0 THEN CAST(json_extract(item.value,'$.qty') AS INTEGER) ELSE 0 END) FROM json_each(CASE WHEN json_valid(NEW.items_json) THEN NEW.items_json ELSE '[]' END) item),0),NEW.subtotal_cents,NEW.shipping_cents,NEW.total_cents,NEW.paid_amount_cents WHERE 1 ON CONFLICT(order_id) DO UPDATE SET last_order_update_at=excluded.last_order_update_at,status=excluded.status,pizza_quantity=excluded.pizza_quantity,subtotal_cents=excluded.subtotal_cents,shipping_cents=excluded.shipping_cents,total_cents=excluded.total_cents,paid_amount_cents=excluded.paid_amount_cents WHERE excluded.last_order_update_at>=doppio_management_sales.last_order_update_at;\nEND;"
 ];
 const backfill="INSERT INTO doppio_management_sales(order_id,order_created_at,last_order_update_at,status,pizza_quantity,subtotal_cents,shipping_cents,total_cents,paid_amount_cents) SELECT o.id,o.created_at,o.updated_at,o.status,COALESCE((SELECT SUM(CASE WHEN json_type(item.value,'$.qty')='integer' AND CAST(json_extract(item.value,'$.qty') AS INTEGER)>0 THEN CAST(json_extract(item.value,'$.qty') AS INTEGER) ELSE 0 END) FROM json_each(CASE WHEN json_valid(o.items_json) THEN o.items_json ELSE '[]' END) item),0),o.subtotal_cents,o.shipping_cents,o.total_cents,o.paid_amount_cents FROM doppio_orders o WHERE 1 ON CONFLICT(order_id) DO UPDATE SET last_order_update_at=excluded.last_order_update_at,status=excluded.status,pizza_quantity=excluded.pizza_quantity,subtotal_cents=excluded.subtotal_cents,shipping_cents=excluded.shipping_cents,total_cents=excluded.total_cents,paid_amount_cents=excluded.paid_amount_cents WHERE excluded.last_order_update_at>=doppio_management_sales.last_order_update_at;";
-let preparing=null;
+const managementReadyPromises=new WeakMap();
 export async function ensureManagementDb(env){
  if(!env.DOPPIO_DB)throw Error('D1 indisponível');
+ let preparing=managementReadyPromises.get(env.DOPPIO_DB);
  if(!preparing)preparing=(async()=>{
   // Necessário criar paid_amount_cents antes de instalar triggers de espelhamento.
   await ensureOrdersDb(env);
   for(const sql of definitions)await env.DOPPIO_DB.prepare(sql).run();
   // Reconcilia pedidos existentes. UPSERT mantém uma linha por pedido, sem PII.
   await env.DOPPIO_DB.prepare(backfill).run();
- })().catch(error=>{preparing=null;throw error;});
+ })().catch(error=>{managementReadyPromises.delete(env.DOPPIO_DB);throw error;});
+ if(!managementReadyPromises.has(env.DOPPIO_DB))managementReadyPromises.set(env.DOPPIO_DB,preparing);
  return preparing;
 }

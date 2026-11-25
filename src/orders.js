@@ -12,7 +12,7 @@ const STATUS_LABELS={
   cancelado:'Cancelado'
 };
 const KEEP_DAYS=90;
-let readyPromise=null;
+const orderReadyPromises=new WeakMap();
 const json=(obj,status=200)=>new Response(JSON.stringify(obj),{
   status,headers:{
     'content-type':'application/json; charset=utf-8',
@@ -28,6 +28,7 @@ const trim=(value,max=300)=>String(value||'').trim().slice(0,max);
 const cents=n=>Math.round(n*100);
 export async function ensureOrdersDb(env){
   if(!env.DOPPIO_DB)throw Error('database_unavailable');
+  let readyPromise=orderReadyPromises.get(env.DOPPIO_DB);
   if(!readyPromise){
     readyPromise=env.DOPPIO_DB.exec(
       'CREATE TABLE IF NOT EXISTS doppio_orders ('
@@ -53,7 +54,8 @@ export async function ensureOrdersDb(env){
           catch(e){if(!/duplicate column name/i.test(String(e.message||'')))throw e;}
         }
       }
-    }).catch(e=>{readyPromise=null;throw e;});
+    }).catch(e=>{orderReadyPromises.delete(env.DOPPIO_DB);throw e;});
+    orderReadyPromises.set(env.DOPPIO_DB,readyPromise);
   }
   await readyPromise;
 }
