@@ -17,6 +17,18 @@ export async function ensureManagementDb(env){
   // Necessário criar paid_amount_cents antes de instalar triggers de espelhamento.
   await ensureOrdersDb(env);
   for(const sql of definitions)await env.DOPPIO_DB.prepare(sql).run();
+
+  // Migração aditiva: todos os lançamentos existentes continuam no banco.
+  const info=await env.DOPPIO_DB.prepare('PRAGMA table_info(doppio_management_expenses)').all();
+  const columns=new Set((info.results||[]).map(row=>row.name));
+  if(!columns.has('revision'))await env.DOPPIO_DB.prepare('ALTER TABLE doppio_management_expenses ADD COLUMN revision INTEGER NOT NULL DEFAULT 0').run();
+  if(!columns.has('archived_at'))await env.DOPPIO_DB.prepare('ALTER TABLE doppio_management_expenses ADD COLUMN archived_at INTEGER').run();
+  await env.DOPPIO_DB.prepare('CREATE INDEX IF NOT EXISTS doppio_management_expenses_active_date ON doppio_management_expenses(expense_date,archived_at)').run();
+  await env.DOPPIO_DB.prepare("CREATE TABLE IF NOT EXISTS doppio_management_expense_audit (event_id TEXT PRIMARY KEY, expense_id TEXT NOT NULL, action TEXT NOT NULL CHECK(action IN ('created','updated','archived')), event_at INTEGER NOT NULL, previous_json TEXT, current_json TEXT)").run();
+  // Registro automático no mesmo comando/transaction SQLite. Exclusão é arquivamento
+  // reversível via banco; não apagamos permanentemente o histórico.
+  await env.DOPPIO_DB.prepare("CREATE TRIGGER IF NOT EXISTS doppio_management_expense_created AFTER INSERT ON doppio_management_expenses BEGIN INSERT INTO doppio_management_expense_audit(event_id,expense_id,action,event_at,previous_json,current_json) VALUES (lower(hex(randomblob(16))),NEW.id,'created',CAST(strftime('%s','now') AS INTEGER),NULL,json_object('date',NEW.expense_date,'category',NEW.category,'description',NEW.description,'amountCents',NEW.amount_cents,'paidAt',NEW.paid_at)); END").run();
+  await env.DOPPIO_DB.prepare("CREATE TRIGGER IF NOT EXISTS doppio_management_expense_modified AFTER UPDATE ON doppio_management_expenses BEGIN INSERT INTO doppio_management_expense_audit(event_id,expense_id,action,event_at,previous_json,current_json) VALUES (lower(hex(randomblob(16))),NEW.id,CASE WHEN NEW.archived_at IS NOT NULL AND OLD.archived_at IS NULL THEN 'archived' ELSE 'updated' END,CAST(strftime('%s','now') AS INTEGER),json_object('date',OLD.expense_date,'category',OLD.category,'description',OLD.description,'amountCents',OLD.amount_cents,'paidAt',OLD.paid_at),json_object('date',NEW.expense_date,'category',NEW.category,'description',NEW.description,'amountCents',NEW.amount_cents,'paidAt',NEW.paid_at)); END").run();
   // Reconcilia pedidos existentes. UPSERT mantém uma linha por pedido, sem PII.
   await env.DOPPIO_DB.prepare(backfill).run();
  })().catch(error=>{managementReadyPromises.delete(env.DOPPIO_DB);throw error;});

@@ -58,11 +58,11 @@ async function getSummary(env,month){
       "FROM doppio_management_sales WHERE order_created_at>=? AND order_created_at<?").bind(start,end).first(),
     q("SELECT COALESCE(SUM(amount_cents),0) AS booked_expenses_cents,"+
       "COALESCE(SUM(CASE WHEN paid_at IS NOT NULL THEN amount_cents ELSE 0 END),0) AS paid_expenses_cents,"+
-      "COUNT(*) AS expense_entries FROM doppio_management_expenses WHERE expense_date>=? AND expense_date<?")
+      "COUNT(*) AS expense_entries FROM doppio_management_expenses WHERE expense_date>=? AND expense_date<? AND archived_at IS NULL")
       .bind(month+'-01',nextMonth(month)+'-01').first(),
     q('SELECT revenue_target_cents,profit_target_cents,pizza_target,operating_weekdays FROM doppio_management_goals WHERE month=?').bind(month).first(),
-    q("SELECT id,expense_date,category,description,amount_cents,paid_at FROM doppio_management_expenses "+
-      "WHERE expense_date>=? AND expense_date<? ORDER BY expense_date DESC,id DESC LIMIT 200")
+    q("SELECT id,expense_date,category,description,amount_cents,paid_at,revision FROM doppio_management_expenses "+
+      "WHERE expense_date>=? AND expense_date<? AND archived_at IS NULL ORDER BY expense_date DESC,id DESC LIMIT 200")
       .bind(month+'-01',nextMonth(month)+'-01').all()
   ]);
   const s=sales||{},e=expenses||{};
@@ -72,7 +72,7 @@ async function getSummary(env,month){
   const partialBalanceCents=salesCents-bookedCents;
   const rows=(details.results||[]).map(x=>({
     id:x.id,date:x.expense_date,category:x.category,description:x.description,
-    amountCents:x.amount_cents,paidAt:x.paid_at
+    amountCents:x.amount_cents,paidAt:x.paid_at,revision:Number(x.revision||0)
   }));
   return send({ok:true,month,timezone:'America/Sao_Paulo',
     sales:{ordersTotal:Number(s.orders_total||0),confirmedOrders:Number(s.confirmed_orders||0),
@@ -94,20 +94,63 @@ async function getSummary(env,month){
     ]});
 }
 function nextMonth(month){const [y,m]=month.split('-').map(Number);return (m===12?y+1:y)+'-'+String(m===12?1:m+1).padStart(2,'0');}
-async function postExpense(request,env){
-  let x;try{x=await jsonBody(request);}catch(e){return fail('validation',e.message,422);}
-  if(!dateOK(x.date))return fail('date','Informe a data da despesa no formato AAAA-MM-DD.',422);
-  if(!categoryNames.has(x.category))return fail('category','Categoria de despesa inválida.',422);
-  if(!str(x.description,2,160))return fail('description','Descrição deve ter entre 2 e 160 caracteres.',422);
-  if(!isCents(x.amountCents))return fail('amount','Informe um valor positivo em centavos.',422);
+function expenseInput(x){
+  if(!dateOK(x.date))throw Error('Informe uma data de despesa válida.');
+  if(!categoryNames.has(x.category))throw Error('Escolha uma categoria válida.');
+  if(!str(x.description,2,160))throw Error('A descrição deve ter de 2 a 160 caracteres.');
+  if(!isCents(x.amountCents))throw Error('Informe um valor positivo em centavos.');
   if(x.paidDate!==null&&x.paidDate!==undefined&&!dateOK(x.paidDate))
-    return fail('paid_date','Data de pagamento inválida.',422);
+    throw Error('Data de pagamento inválida.');
+  return {date:x.date,category:x.category,description:x.description.trim(),
+    amountCents:x.amountCents,paidAt:x.paidDate?dayStamp(x.paidDate):null};
+}
+async function postExpense(request,env){
+  let x;
+  try{x=expenseInput(await jsonBody(request));}
+  catch(e){return fail('validation',e.message,422);}
   try{
     const id=crypto.randomUUID();
     await env.DOPPIO_DB.prepare('INSERT INTO doppio_management_expenses(id,expense_date,category,description,amount_cents,paid_at) VALUES (?,?,?,?,?,?)')
-      .bind(id,x.date,x.category,x.description.trim(),x.amountCents,x.paidDate?dayStamp(x.paidDate):null).run();
-    return send({ok:true,id},201);
+      .bind(id,x.date,x.category,x.description,x.amountCents,x.paidAt).run();
+    return send({ok:true,id,revision:0},201);
   }catch(_){return fail('database','Não foi possível cadastrar a despesa.',503);}
+}
+const ID_RE=/^\/api\/admin\/management\/expenses\/([0-9a-f-]{36})$/i;
+async function changeExpense(request,env,url){
+  const match=ID_RE.exec(url.pathname);
+  if(!match)return fail('not_found','Despesa não encontrada.',404);
+  let input;
+  try{input=await jsonBody(request,2500);}
+  catch(e){return fail('validation',e.message,422);}
+  if(!Number.isInteger(input.expectedRevision)||input.expectedRevision<0)
+    return fail('revision','Atualize a lista de despesas antes de editar.',422);
+  let expense;
+  try{
+    expense=await env.DOPPIO_DB.prepare('SELECT revision,archived_at FROM doppio_management_expenses WHERE id=?')
+      .bind(match[1]).first();
+  }catch(_){return fail('database','Não foi possível carregar a despesa.',503);}
+  if(!expense||expense.archived_at!==null)return fail('not_found','Esta despesa já foi removida.',404);
+  if(expense.revision!==input.expectedRevision)return fail('conflict','Esta despesa foi alterada em outra janela. Atualize para continuar.',409);
+  if(request.method==='PUT'){
+    let x;
+    try{x=expenseInput(input);}
+    catch(e){return fail('validation',e.message,422);}
+    try{
+      const update=await env.DOPPIO_DB.prepare('UPDATE doppio_management_expenses SET expense_date=?,category=?,description=?,amount_cents=?,paid_at=?,revision=revision+1 WHERE id=? AND revision=? AND archived_at IS NULL')
+        .bind(x.date,x.category,x.description,x.amountCents,x.paidAt,match[1],input.expectedRevision).run();
+      if(!update.meta?.changes)return fail('conflict','Esta despesa mudou em outra janela. Atualize e tente novamente.',409);
+      return send({ok:true,id:match[1],revision:input.expectedRevision+1});
+    }catch(_){return fail('database','Não foi possível atualizar esta despesa.',503);}
+  }
+  if(request.method==='DELETE'){
+    try{
+      const update=await env.DOPPIO_DB.prepare('UPDATE doppio_management_expenses SET archived_at=?,revision=revision+1 WHERE id=? AND revision=? AND archived_at IS NULL')
+        .bind(now(),match[1],input.expectedRevision).run();
+      if(!update.meta?.changes)return fail('conflict','Esta despesa mudou em outra janela. Atualize e tente novamente.',409);
+      return send({ok:true,archived:true,id:match[1]});
+    }catch(_){return fail('database','Não foi possível remover esta despesa da lista.',503);}
+  }
+  return fail('method','Método não permitido.',405);
 }
 async function putGoal(request,env){
   let x;try{x=await jsonBody(request);}catch(e){return fail('validation',e.message,422);}
@@ -124,7 +167,7 @@ async function putGoal(request,env){
   }catch(_){return fail('database','Não foi possível salvar metas.',503);}
 }
 export async function managementApi(request,env,url){
-  if(!['GET','POST','PUT'].includes(request.method))return fail('method','Método não permitido.',405);
+  if(!['GET','POST','PUT','DELETE'].includes(request.method))return fail('method','Método não permitido.',405);
   try{await ensureManagementDb(env);}
   catch(e){console.error('[Doppio gestão] Falha na migração aditiva:',e?.message||String(e));return fail('migration','Não foi possível preparar a gestão. Pedidos existentes não foram modificados.',503);}
   const p=url.pathname;
@@ -133,6 +176,7 @@ export async function managementApi(request,env,url){
     try{return await getSummary(env,month);}catch(_){return fail('database','Não foi possível gerar o resumo gerencial.',503);}
   }
   if(p==='/api/admin/management/expenses'&&request.method==='POST')return postExpense(request,env);
+  if(ID_RE.test(p)&&(request.method==='PUT'||request.method==='DELETE'))return changeExpense(request,env,url);
   if(p==='/api/admin/management/goals'&&request.method==='PUT')return putGoal(request,env);
   return fail('not_found','Recurso de gestão não encontrado.',404);
 }
