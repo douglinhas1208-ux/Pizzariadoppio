@@ -53,3 +53,14 @@ Esta branch agrega:
 - [ ] Executar plano de backup e rollback antes de qualquer mudança em produção.
 
 **Importante:** a infraestrutura de produção, o catálogo atual e os pedidos operacionais NÃO foram modificados por este conjunto de commits.
+
+
+## Atualização do controle de despesas — 25/11/2026
+- Lançamento rápido com descrição, valor, categoria, data e pagamento, inclusive atalhos de categorias.
+- Busca de gastos por descrição ou categoria e filtros de pagos/pendentes.
+- Edição por ID e revisão otimista (`expectedRevision`), sem sobrescrever mudanças de outra sessão.
+- Exclusão apenas lógica (`archived_at`); o gasto sai dos totais, mas continua guardado.
+- Auditoria automática no SQLite para criação, edição e arquivamento, com estados anterior e novo.
+- Migração aditiva de `revision` e `archived_at` que mantém despesas já registradas.
+- Dez testes automatizados em SQLite isolado e teste de interface com dados simulados (criação, edição, exclusão, busca, layout mobile).
+- Não cria lançamentos de despesa automaticamente ao comprar ingredientes no módulo Estoque; as duas operações permanecem independentes e precisam ser conciliadas para evitar dupla contagem.
