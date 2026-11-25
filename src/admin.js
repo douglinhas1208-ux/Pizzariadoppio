@@ -11,11 +11,11 @@ const COOKIE='doppio_admin';
 const SESSION_SECONDS=8*60*60;
 const enc=new TextEncoder();
 const SWEET_PRODUCTS=[
-  {id:'chocolate-morango',name:'Chocolate com Morango',description:'Pizza doce de chocolate com morangos.',ingredients:['Massa','Chocolate','Morango'],category:'Doces',image:'assets/chocolate-morango-catalogo.avif',price:56.99,available:false,tag:'Doce',halfAllowed:false},
-  {id:'uva-nevada',name:'Uva Nevada (Ninho com Uva)',description:'Pizza doce de creme de Ninho com uvas.',ingredients:['Massa','Creme de Ninho','Uva'],category:'Doces',image:'assets/uva-nevada-catalogo.avif',price:56.99,available:true,tag:'Doce',halfAllowed:true},
-  {id:'chocolate-uva',name:'Chocolate com Uva',description:'Pizza doce com cobertura de chocolate e uvas verdes.',ingredients:['Massa','Chocolate','Uva verde'],category:'Doces',image:'assets/chocolate-uva-catalogo.avif',price:56.99,available:true,tag:'Doce',halfAllowed:true}
+  {id:'chocolate-morango',name:'Chocolate com Morango',description:'Pizza doce de chocolate com morangos.',ingredients:['Massa','Chocolate','Morango'],category:'Doces',image:'assets/chocolate-morango-real-2026.webp',price:56.99,available:false,tag:'Doce',halfAllowed:false},
+  {id:'uva-nevada',name:'Uva Nevada (Ninho com Uva)',description:'Pizza doce de creme de Ninho com uvas.',ingredients:['Massa','Creme de Ninho','Uva'],category:'Doces',image:'assets/uva-nevada-real-2026.webp',price:56.99,available:true,tag:'Doce',halfAllowed:true},
+  {id:'chocolate-uva',name:'Chocolate com Uva',description:'Pizza doce com cobertura de chocolate e uvas verdes.',ingredients:['Massa','Chocolate','Uva verde'],category:'Doces',image:'assets/chocolate-uva-real-2026.webp',price:56.99,available:true,tag:'Doce',halfAllowed:true}
 ];
-const CATALOG_VERSION=7;
+const CATALOG_VERSION=8;
 const SWEET_IDS=new Set(SWEET_PRODUCTS.map(p=>p.id));
 // Metades são agrupadas em doces ou salgadas no checkout e revalidadas no servidor.
 const DEFAULT_STATE={
@@ -28,7 +28,7 @@ const DEFAULT_STATE={
   openHours:'18h às 23h',
   etaMinutes:40,
   products:[
-    {id:'frango',name:'Frango com Catupiry',description:'Frango e Catupiry.',ingredients:['Massa','Molho de tomate','Frango','Catupiry','Azeitonas'],category:'Clássicas',image:'assets/frango-real.avif',price:54.99,available:true,tag:'Clássica'},
+    {id:'frango',name:'Frango com Catupiry',description:'Frango e Catupiry.',ingredients:['Massa','Molho de tomate','Frango','Catupiry','Azeitonas'],category:'Clássicas',image:'assets/frango-real-2026.webp',price:54.99,available:true,tag:'Clássica'},
     {id:'brocolis',name:'Brócolis com Bacon',description:'Brócolis, bacon e Catupiry.',ingredients:['Massa','Molho de tomate','Brócolis','Bacon','Catupiry'],category:'Clássicas',image:'assets/brocolis.webp',price:54.99,available:true,tag:'Clássica'},
     {id:'calabresa',name:'Calabresa',description:'Calabresa e cebola.',ingredients:['Massa','Molho de tomate','Calabresa','Cebola','Azeitonas'],category:'Clássicas',image:'assets/calabresa-real.avif',price:49.99,available:true,tag:'Clássica'},
     {id:'mussarela',name:'Mussarela',description:'Mussarela, tomate e azeitonas.',ingredients:['Massa','Molho de tomate','Mussarela','Tomate','Azeitonas'],category:'Clássicas',image:'assets/mussarela.webp',price:49.99,available:true,tag:'Clássica'},
@@ -210,6 +210,7 @@ async function stateRow(env){
       else if(p.id==='chocolate-morango'){
         // Sabor antigo permanece no histórico do painel, mas deixa de aparecer e de participar do meio a meio.
         current.available=false;current.halfAllowed=false;
+        if(current.image==='assets/chocolate-morango-catalogo.avif')current.image=p.image;
       }else if(p.id==='chocolate-uva'){
         current.name=p.name;current.description=p.description;current.ingredients=[...p.ingredients];
         current.category='Doces';current.image=p.image;current.price=56.99;
@@ -217,9 +218,12 @@ async function stateRow(env){
       }else {
         if(current.price===54.99||current.price===null)current.price=56.99;
         current.halfAllowed=true;current.category='Doces';
-        if(p.id==='uva-nevada'&&['assets/doce-uva.svg','assets/uva-nevada-foto-real.avif'].includes(current.image))current.image='assets/uva-nevada-catalogo.avif';
+        if(p.id==='uva-nevada'&&['assets/doce-uva.svg','assets/uva-nevada-foto-real.avif','assets/uva-nevada-catalogo.avif'].includes(current.image))current.image=p.image;
       }
     }
+    // Substituição segura da foto anterior de frango. Fotos personalizadas permanecem intactas.
+    const frango=state.products.find(item=>item.id==='frango');
+    if(frango?.image==='assets/frango-real.avif')frango.image='assets/frango-real-2026.webp';
     state.catalogVersion=CATALOG_VERSION;
     const nextRevision=row.revision+1;
     const updated=await env.DOPPIO_DB.prepare('UPDATE admin_state SET revision=?,data=?,updated_at=? WHERE id=1 AND revision=?')

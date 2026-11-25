@@ -309,3 +309,7 @@ body.doppio-map-open{overflow:hidden}
 /* Chocolate com Uva: mostrar a pizza inteira, sem cortar a fotografia aprovada. */
 .pizza-card:not(.half-choice-card) .pizza-image:has(>img[src$="chocolate-uva-catalogo.avif"]){background:#a97651}
 .pizza-card:not(.half-choice-card) .pizza-image>img[src$="chocolate-uva-catalogo.avif"]{object-fit:contain;object-position:center}
+
+/* Fotografias reais 2026: enquadradas em 960×540, sem ampliação artificial nem corte de pizza. */
+.pizza-card .pizza-image>img[src$="real-2026.webp"]{object-fit:cover;object-position:center;transform:none}
+.pizza-card:hover .pizza-image>img[src$="real-2026.webp"]{transform:scale(1.025)}

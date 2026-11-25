@@ -4,16 +4,20 @@
   const money=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const photos=[
-    {path:'assets/frango-real.avif',name:'Frango com Catupiry'},
+    {path:'assets/frango-real-2026.webp',name:'Frango com Catupiry · Foto real nova'},
+    {path:'assets/frango-real.avif',name:'Frango com Catupiry · Foto anterior'},
     {path:'assets/brocolis.webp',name:'Brócolis com Bacon'},
     {path:'assets/calabresa-real.avif',name:'Calabresa'},
     {path:'assets/mussarela.webp',name:'Mussarela'},
     {path:'assets/doce-morango.svg',name:'Ilustração · Chocolate com Morango'},
     {path:'assets/doce-uva.svg',name:'Ilustração · Uva Nevada'},
     {path:'assets/uva-nevada-foto-real.avif',name:'Uva Nevada · Foto real da Doppio'},
-    {path:'assets/chocolate-morango-catalogo.avif',name:'Chocolate com Morango · Imagem ilustrativa'},
-    {path:'assets/chocolate-uva-catalogo.avif',name:'Chocolate com Uva · Imagem ilustrativa'},
-    {path:'assets/uva-nevada-catalogo.avif',name:'Uva Nevada · Imagem ilustrativa'}
+    {path:'assets/chocolate-morango-real-2026.webp',name:'Chocolate com Morango · Foto real nova'},
+    {path:'assets/chocolate-uva-real-2026.webp',name:'Chocolate com Uva · Foto real nova'},
+    {path:'assets/uva-nevada-real-2026.webp',name:'Uva Nevada · Foto real nova'},
+    {path:'assets/chocolate-morango-catalogo.avif',name:'Chocolate com Morango · Imagem anterior'},
+    {path:'assets/chocolate-uva-catalogo.avif',name:'Chocolate com Uva · Imagem anterior'},
+    {path:'assets/uva-nevada-catalogo.avif',name:'Uva Nevada · Imagem anterior'}
   ];
   let state=null,dirty=false,busy=false,toastTimer;
   let adminPhotos=[];
