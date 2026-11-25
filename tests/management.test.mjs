@@ -47,6 +47,20 @@ test('sem migração, API prepara tabelas e mantém dados operacionais',async()=
   }finally{h.close();}
 });
 
+test('migração automática importa pedidos existentes antes do primeiro acesso',async()=>{
+  const h=setup();
+  try{
+    h.add('antes',period-150*86400,'concluido',[2,1],16000,500,16500,16500);
+    const result=await h.call('/summary?month=2026-06');
+    assert.equal(result.status,200);
+    assert.equal(h.db.prepare("SELECT pizza_quantity AS n FROM doppio_management_sales WHERE order_id='antes'").get().n,3);
+    const later=await h.call('/summary?month=2026-06');
+    assert.equal(later.status,200);
+    assert.equal(h.db.prepare('SELECT COUNT(*) AS n FROM doppio_management_sales').get().n,1);
+    assert.equal(h.db.prepare('SELECT COUNT(*) AS n FROM doppio_orders').get().n,1);
+  }finally{h.close();}
+});
+
 test('sincroniza histórico, status e recebimentos sem duplicar',()=>{
   const h=setup();
   try{

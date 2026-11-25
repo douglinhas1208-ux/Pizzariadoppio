@@ -1,5 +1,6 @@
 import {adminApi,publicCatalogScript,publicStoreStatus,publicCreateOrder} from './admin.js';
 import {expireOrders} from './orders.js';
+import {ensureManagementDb} from './management-schema.js';
 import {servePhoto} from './images.js';
 /*
  * Doppio Pizzas — cálculo de frete no Cloudflare Worker.
@@ -185,6 +186,8 @@ export default {
     return env.ASSETS.fetch(request);
   },
   async scheduled(_event,env,ctx){
-    ctx.waitUntil(expireOrders(env));
+    // Arquivar informações financeiras antes de qualquer exclusão operacional de 90 dias.
+    // Se o espelhamento falhar, preservar pedidos para reprocessamento futuro.
+    ctx.waitUntil((async()=>{await ensureManagementDb(env);await expireOrders(env);})());
   }
 };
