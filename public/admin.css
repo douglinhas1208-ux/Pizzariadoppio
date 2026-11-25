@@ -306,3 +306,84 @@
  .mgmt-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:450px){.mgmt-metrics{grid-template-columns:1fr 1fr;gap:8px}.mgmt-metric{padding:12px}}
+
+
+/* Gestão de despesas: entrada rápida e cartões com edição/remoção segura */
+.mgmt-expense-hub{scroll-margin-top:16px}
+.mgmt-expense-header{display:flex;align-items:start;justify-content:space-between;gap:22px;flex-wrap:wrap;margin:4px 0 18px}
+.mgmt-expense-header h4{font-size:1.48rem;letter-spacing:-.045em;color:#261d17;margin:5px 0 5px}
+.mgmt-expense-header p{max-width:390px;color:#887463;font-size:.81rem;line-height:1.55;margin:0}
+.mgmt-expense-summary{display:grid;grid-template-columns:repeat(3,minmax(110px,1fr));gap:8px;flex:1;max-width:490px}
+.mgmt-expense-summary>div{display:flex;flex-direction:column;gap:5px;background:#fff7ef;border:1px solid #eedbc7;padding:13px;border-radius:11px;min-width:0}
+.mgmt-expense-summary small{font-size:.67rem;font-weight:800;color:#806a58}
+.mgmt-expense-summary strong{font-size:clamp(.94rem,1.65vw,1.22rem);font-weight:950;letter-spacing:-.035em;color:#33241b;overflow-wrap:anywhere}
+.mgmt-quick-form{padding:20px;background:linear-gradient(125deg,#fff9f1,#fffdf8);border:1px solid #ecd5bd;border-radius:17px;box-shadow:0 5px 24px #9c57220c}
+.mgmt-form-head{display:flex;flex-direction:column;gap:4px;margin-bottom:13px}
+.mgmt-form-head strong{font-size:1.13rem;color:#352419;letter-spacing:-.035em}
+.mgmt-form-head small{font-size:.77rem;color:#89715d}
+.mgmt-quick-fields{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(140px,.8fr);gap:12px}
+.mgmt-detail-fields{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px}
+.mgmt-quick-form label,.mgmt-expense-filters label{font-size:.75rem;font-weight:850;color:#544135;display:flex;flex-direction:column;gap:7px;min-width:0}
+.mgmt-quick-form input,.mgmt-quick-form select,.mgmt-expense-filters input,.mgmt-expense-filters select{width:100%;min-width:0;height:44px;padding:10px 12px;border-radius:10px;background:white;border:1px solid #d8c8b9;color:#352820;font-size:.93rem;font-weight:600;outline:none}
+.mgmt-quick-form input:focus,.mgmt-quick-form select:focus,.mgmt-expense-filters input:focus,.mgmt-expense-filters select:focus{border-color:#d46b36;box-shadow:0 0 0 3px #ed915b33}
+.mgmt-field-amount input{font-size:1.12rem;font-weight:850;letter-spacing:.03em}
+.mgmt-category-quick{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0 8px}
+.mgmt-category-quick button{padding:9px 11px;border:1px solid #eadaca;border-radius:9px;background:#fff;color:#76553c;font-size:.76rem;font-weight:750;min-height:36px}
+.mgmt-category-quick button.active,.mgmt-category-quick button[aria-pressed="true"]{background:#fce9d5;color:#9c431c;border-color:#df9c6e;box-shadow:inset 0 0 0 1px #e3ac8240}
+.mgmt-category-quick button:hover{border-color:#d27441}
+.mgmt-paid-details{font-size:.76rem;color:#765c4a;margin-top:13px}
+.mgmt-paid-details summary{cursor:pointer;font-weight:700;display:list-item;max-width:max-content}
+.mgmt-paid-details label{max-width:225px;margin-top:12px}
+.mgmt-paid-details[hidden]{display:none!important}
+.mgmt-form-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:17px}
+.mgmt-form-actions .admin-button{min-height:42px}
+.mgmt-form-actions button[hidden]{display:none!important}
+.mgmt-list-head{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:22px 0 13px}
+.mgmt-list-head h4{font-size:1.12rem;letter-spacing:-.028em;margin:0 0 4px;color:#31231a}
+.mgmt-list-head small{font-size:.73rem;color:#8a796c}
+.mgmt-expense-filters{display:flex;gap:9px;flex-wrap:wrap;align-items:end}
+.mgmt-expense-filters label{font-size:.69rem}
+.mgmt-expense-filters input,.mgmt-expense-filters select{height:39px;font-size:.79rem}
+.mgmt-search-label{min-width:min(240px,55vw)}
+.mgmt-expense-list{display:flex;flex-direction:column;gap:9px;margin-bottom:17px}
+.mgmt-expense-item{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:13px;align-items:center;padding:14px;border:1px solid #e9ddd0;border-radius:13px;background:#fff;min-width:0}
+.mgmt-expense-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:11px;background:#fbecdc;font-size:1.3rem}
+.mgmt-expense-info{display:flex;flex-direction:column;gap:5px;min-width:0}
+.mgmt-expense-info>strong{font-size:.93rem;color:#35251c;overflow-wrap:anywhere}
+.mgmt-expense-info>small{color:#887567;font-size:.73rem}
+.mgmt-pay-tag{width:max-content;border-radius:99px;padding:4px 8px;font-size:.65rem;font-weight:850}
+.mgmt-pay-tag.paid{background:#e7f4e6;color:#31643a}
+.mgmt-pay-tag.pending{background:#fff3d7;color:#88541c}
+.mgmt-expense-right{display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+.mgmt-expense-right>strong{font-size:1.08rem;font-weight:900;white-space:nowrap;color:#36251b}
+.mgmt-expense-actions{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.mgmt-expense-actions button{background:#f7f1e9;border:1px solid #ecdfd2;color:#5a4030;border-radius:8px;padding:7px 10px;font-size:.73rem;font-weight:850}
+.mgmt-expense-actions .mgmt-danger{background:#fff2ef;color:#9c3829;border-color:#f6dbd5}
+.mgmt-expense-actions button:hover{filter:brightness(.96)}
+.mgmt-expense-confirm{grid-column:1/-1;border-top:1px solid #f0e4d7;padding-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.77rem;color:#803d2d}
+.mgmt-expense-confirm span{flex:1;min-width:170px}
+.mgmt-expense-confirm button{border-radius:8px;border:1px solid #edc2b7;background:#fff3ee;color:#963622;padding:8px 11px;font-size:.75rem;font-weight:850}
+.mgmt-expense-confirm button[data-expense-action="confirm"]{background:#a63c29;color:#fff;border-color:#a63c29}
+.mgmt-expense-empty{margin:0;text-align:center;padding:35px 20px;background:#fffaf4;border:1px dashed #ead9c8;border-radius:12px;color:#806956;font-size:.83rem}
+@media(max-width:790px){
+  .mgmt-expense-summary{max-width:none;width:100%;flex-basis:100%}
+  .mgmt-list-head{align-items:stretch}
+  .mgmt-expense-filters{flex:1}
+  .mgmt-search-label{min-width:190px;flex:1}
+}
+@media(max-width:520px){
+  .mgmt-quick-form{padding:15px}
+  .mgmt-quick-fields,.mgmt-detail-fields{grid-template-columns:1fr}
+  .mgmt-category-quick button{font-size:.72rem;padding:8px 10px}
+  .mgmt-expense-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .mgmt-expense-summary>div{padding:9px 7px}
+  .mgmt-expense-summary small{font-size:.61rem}
+  .mgmt-expense-summary strong{font-size:.85rem}
+  .mgmt-expense-item{grid-template-columns:37px minmax(0,1fr);gap:10px;padding:12px}
+  .mgmt-expense-icon{width:37px;height:37px;font-size:1.08rem}
+  .mgmt-expense-right{grid-column:2;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .mgmt-expense-right>strong{font-size:1.02rem}
+  .mgmt-expense-info>strong{font-size:.88rem}
+  .mgmt-expense-filters{width:100%}
+  .mgmt-expense-filters .mgmt-search-label{min-width:0;flex:1}
+}
