@@ -26,7 +26,7 @@ const goodText=(value,max,min=0)=>typeof value==='string'&&value.trim().length>=
   !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value);
 const trim=(value,max=300)=>String(value||'').trim().slice(0,max);
 const cents=n=>Math.round(n*100);
-async function ensureOrdersDb(env){
+export async function ensureOrdersDb(env){
   if(!env.DOPPIO_DB)throw Error('database_unavailable');
   if(!readyPromise){
     readyPromise=env.DOPPIO_DB.exec(

@@ -1,3 +1,4 @@
+import {ensureManagementDb} from './management-schema.js';
 /*
  * Doppio Pizzas — gestão empresarial (pré-produção).
  * Requer migrations/management-draft.sql aplicada em BANCO DE TESTE.
@@ -39,11 +40,6 @@ async function jsonBody(request,max=4000){
   const item=JSON.parse(raw);
   if(!item||Array.isArray(item)||typeof item!=='object')throw Error('Dados inválidos.');
   return item;
-}
-async function hasMigration(env){
-  if(!env.DOPPIO_DB)return false;
-  const rows=await env.DOPPIO_DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('doppio_management_sales','doppio_management_expenses','doppio_management_goals')").all();
-  return (rows.results||[]).length===3;
 }
 async function getSummary(env,month){
   const [start,end]=bounds(month),q=env.DOPPIO_DB.prepare.bind(env.DOPPIO_DB);
@@ -129,8 +125,8 @@ async function putGoal(request,env){
 }
 export async function managementApi(request,env,url){
   if(!['GET','POST','PUT'].includes(request.method))return fail('method','Método não permitido.',405);
-  try{if(!await hasMigration(env))return fail('not_migrated','Gestão empresarial está em preparação. Banco de produção não foi alterado.',503);}
-  catch(_){return fail('database','Banco de gestão indisponível.',503);}
+  try{await ensureManagementDb(env);}
+  catch(_){return fail('migration','Não foi possível preparar a gestão. Pedidos existentes não foram modificados.',503);}
   const p=url.pathname;
   if(p==='/api/admin/management/summary'&&request.method==='GET'){
     let month;try{month=monthFromRequest(url);}catch(e){return fail('month',e.message,422);}

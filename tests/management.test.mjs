@@ -37,12 +37,13 @@ function setup(){
 }
 const period=Date.parse('2026-11-20T12:00:00Z')/1000;
 
-test('sem migração, API rejeita sem acessar produção',async()=>{
+test('sem migração, API prepara tabelas e mantém dados operacionais',async()=>{
   const h=setup();
   try{
     const result=await h.call('/summary?month=2026-11');
-    assert.equal(result.status,503);
-    assert.equal(result.code,'not_migrated');
+    assert.equal(result.status,200);
+    assert.equal(result.sales.ordersTotal,0);
+    assert.equal(h.db.prepare("SELECT COUNT(*) AS n FROM doppio_orders").get().n,0);
   }finally{h.close();}
 });
 
