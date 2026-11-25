@@ -126,7 +126,7 @@ async function putGoal(request,env){
 export async function managementApi(request,env,url){
   if(!['GET','POST','PUT'].includes(request.method))return fail('method','Método não permitido.',405);
   try{await ensureManagementDb(env);}
-  catch(_){return fail('migration','Não foi possível preparar a gestão. Pedidos existentes não foram modificados.',503);}
+  catch(e){console.error('[Doppio gestão] Falha na migração aditiva:',e?.message||String(e));return fail('migration','Não foi possível preparar a gestão. Pedidos existentes não foram modificados.',503);}
   const p=url.pathname;
   if(p==='/api/admin/management/summary'&&request.method==='GET'){
     let month;try{month=monthFromRequest(url);}catch(e){return fail('month',e.message,422);}

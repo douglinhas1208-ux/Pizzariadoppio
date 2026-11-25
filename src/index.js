@@ -167,7 +167,7 @@ export default {
     }
     if(url.pathname.startsWith('/api/admin/'))return adminApi(request,env,url);
     if(url.pathname==='/api/status'){
-      return json({service:'doppio-frete',configured:Boolean(env.ORS_API_KEY)});
+      return json({service:'doppio-frete',configured:Boolean(env.ORS_API_KEY),release:'gestao-empresarial-2026-11-25'});
     }
     if(url.pathname==='/api/cep'){
       if(request.method!=='GET')return siteError('method','Use GET.',405);
