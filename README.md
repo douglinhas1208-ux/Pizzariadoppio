@@ -162,3 +162,15 @@ Exemplo ilustrativo, **não pré-cadastrado**: pacote de mussarela com 1.000 g p
 No painel administrativo, a aba **Gestão empresarial** possui lançamento rápido de despesas (descrição, valor, categoria, data e pagamento), atalhos de categorias, busca e filtros. O administrador pode corrigir e arquivar despesas. Cada alteração gera auditoria no D1 e o arquivamento não apaga registros. Os valores financeiros permanecem indicativos até conciliação.
 
 A interface e API foram homologadas com dez testes de SQLite em memória e simulação de uso no navegador para adicionar, editar, buscar e excluir. O catálogo e os pedidos operacionais não são alterados pelos lançamentos gerenciais.
+
+
+## Promoção Doppio — 2 pizzas + Pepsi 2 litros (27/11/2026)
+
+- Promoção ativa: **na compra de pelo menos 2 pizzas no mesmo pedido, o cliente ganha 1 Pepsi 2 L ou 1 Pepsi Zero 2 L**, à escolha, sem custo adicional. Somente uma garrafa por pedido, não uma a cada dupla de pizzas.
+- Vale para pizzas salgadas, doces e meio a meio. Cada unidade de pizza meio a meio conta como **uma** pizza (mesmo com dois sabores). Quantidades de um único sabor também contam.
+- Banner fixo, não abre pop-up. Com 1 pizza o carrinho exibe o progresso; ao adicionar a segunda aparecem duas opções de refrigerante. A variante segue na revisão, no pré-pedido registrado no D1 e na mensagem preparada para WhatsApp.
+- A pizzaria confere disponibilidade do sabor escolhido antes de confirmar a solicitação. Nenhum refrigerante é cobrado ou automaticamente debitado do estoque nesta fase; lançamento de movimentação física continua manual na aba Estoque.
+- O servidor revalida a quantidade de pizzas e rejeita brinde indevido, variante inválida ou produto indisponível. Carrinhos antigos sem opção preenchida recebem a opção padrão Pepsi tradicional, preservando compatibilidade.
+- A tabela `doppio_orders` ganha a coluna opcional `promo_soda_variant` por migração aditiva. Pedidos históricos e relatórios financeiros mantêm seus valores e quantidades. No admin, o brinde aparece com valor R$ 0,00.
+- `promotion.enabled` no config.js controla a experiência pública. `promotion.twoPizzasSodaBannerEnabled` controla **somente o banner**; o desligamento real da promoção também deve acompanhar a regra `PROMO_ENABLED` no servidor (src/orders.js). Evitar alterar apenas um dos lados.
+- Homologação: `node --test tests/promotion.test.mjs` e `node --test tests/management.test.mjs` com Node 22+ e banco SQLite isolado; simulação do carrinho, escolha Pepsi Zero, checkout, API e painel via navegador.
