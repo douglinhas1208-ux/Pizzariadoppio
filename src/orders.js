@@ -14,7 +14,7 @@ const STATUS_LABELS={
 const KEEP_DAYS=90;
 const PROMO_MIN_PIZZAS=2;
 const PROMO_SODA_VARIANTS=Object.freeze({pepsi:'Pepsi 2 litros','pepsi-zero':'Pepsi Zero 2 litros'});
-const PROMO_ENABLED=true; // Oferta ativa: 1 brinde por pedido com 2+ pizzas, doces e meio a meio inclusos.
+const PROMO_ENABLED=false; // Oferta temporariamente pausada: sem brinde em novos pedidos.
 const promoDrinkName=variant=>PROMO_SODA_VARIANTS[variant]||null;
 const orderReadyPromises=new WeakMap();
 const json=(obj,status=200)=>new Response(JSON.stringify(obj),{
@@ -150,10 +150,10 @@ function validateOrder(input,shop){
   }
   // A quantidade total de pizzas usa qty; cada meio a meio é uma pizza inteira.
   const promoEligible=PROMO_ENABLED&&count>=PROMO_MIN_PIZZAS;
-  if(input.promoSodaVariant!==undefined&&input.promoSodaVariant!==null&&
+  if(PROMO_ENABLED&&input.promoSodaVariant!==undefined&&input.promoSodaVariant!==null&&
      !Object.hasOwn(PROMO_SODA_VARIANTS,input.promoSodaVariant))
     throw Error('Escolha Pepsi 2 litros ou Pepsi Zero 2 litros para o brinde.');
-  if(!promoEligible&&input.promoSodaVariant!=null)
+  if(PROMO_ENABLED&&!promoEligible&&input.promoSodaVariant!=null)
     throw Error('O refrigerante grátis exige pelo menos duas pizzas no mesmo pedido.');
   // Compatibilidade com carrinhos antigos: brinde padrão é Pepsi tradicional.
   const promoSodaVariant=promoEligible?(input.promoSodaVariant||'pepsi'):null;

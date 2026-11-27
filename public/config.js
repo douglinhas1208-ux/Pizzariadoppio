@@ -36,8 +36,8 @@ window.DOPPIO_CONFIG = {
   },
   // Coloque false para ocultar o banner promocional sem alterar o catálogo.
   promotion: {
-    enabled: true, // 1 Pepsi 2 L ou Pepsi Zero 2 L grátis por pedido com 2+ pizzas.
-    twoPizzasSodaBannerEnabled: true, // Esta opção controla somente a visibilidade do banner.
+    enabled: false, // PROMOÇÃO PAUSADA temporariamente; reativar também no servidor.
+    twoPizzasSodaBannerEnabled: false, // Banner temporariamente oculto.
     minimumPizzas: 2, bottlesPerOrder: 1
   },
   products: [
