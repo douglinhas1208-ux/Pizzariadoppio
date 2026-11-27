@@ -179,3 +179,6 @@ A interface e API foram homologadas com dez testes de SQLite em memória e simul
 ### Promoção Pepsi 2L temporariamente pausada — 27/11/2026
 
 A oferta de uma Pepsi 2 L ou Pepsi Zero 2 L na compra de 2 pizzas está temporariamente indisponível, sem data de retorno definida. O banner fica oculto, o carrinho e a mensagem do WhatsApp deixam de anunciar o brinde e o servidor não atribui refrigerante aos novos pedidos. Páginas antigas que enviem a escolha de bebida não impedem a finalização: a opção é ignorada enquanto a promoção estiver pausada. Pedidos anteriores que receberam Pepsi continuam preservados no painel. Para reativar, ajustar em conjunto public/config.js (promotion.enabled e twoPizzasSodaBannerEnabled) e src/orders.js (PROMO_ENABLED), após testes. Backup do código com a promoção ativa: backup/promocao-ativa-2026-11-27.
+
+
+Build de pausa da promoção: código implantável na branch main em 27/11/2026. O Worker deve publicar a versão com oferta desativada e sem mudanças no banco.
