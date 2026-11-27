@@ -9,9 +9,10 @@ const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers
   'x-content-type-options':'nosniff','referrer-policy':'no-referrer'
 }});
 const error=(code,message,status=400)=>reply({ok:false,code,message},status);
-let dbPromise=null;
-async function ready(env){
+const inventoryReady=new WeakMap();
+export async function ensureInventoryDb(env){
   if(!env.DOPPIO_DB)throw Error('D1 indisponível');
+  let dbPromise=inventoryReady.get(env.DOPPIO_DB);
   if(!dbPromise){
     dbPromise=env.DOPPIO_DB.exec(
       'CREATE TABLE IF NOT EXISTS stock_ingredients ('
@@ -27,7 +28,8 @@ async function ready(env){
       +'product_id TEXT NOT NULL,ingredient_id TEXT NOT NULL,quantity REAL NOT NULL,'
       +'PRIMARY KEY(product_id,ingredient_id),'
       +'FOREIGN KEY(ingredient_id) REFERENCES stock_ingredients(id));'
-    ).catch(e=>{dbPromise=null;throw e;});
+    ).catch(e=>{inventoryReady.delete(env.DOPPIO_DB);throw e;});
+    inventoryReady.set(env.DOPPIO_DB,dbPromise);
   }
   await dbPromise;
 }
@@ -147,7 +149,7 @@ async function saveRecipe(req,env,productId){
   }catch(_){return error('database','Não foi possível salvar a ficha técnica.',503);}
 }
 export async function inventoryApi(request,env,url){
-  try{await ready(env);}catch(_){return error('database','Não foi possível preparar o banco de estoque.',503);}
+  try{await ensureInventoryDb(env);}catch(_){return error('database','Não foi possível preparar o banco de estoque.',503);}
   const p=url.pathname;
   if(p==='/api/admin/inventory'&&request.method==='GET'){
     try{return await list(env);}catch(_){return error('database','Não foi possível carregar o estoque.',503);}
