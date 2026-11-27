@@ -34,13 +34,13 @@ function createHarness(){
       body:JSON.stringify(input)
     });
     const res=await createOrder(req,env,new URL(req.url),shop,{acceptingOrders:true});
-    return {status:res.status,...await res.json()};
+    return {httpStatus:res.status,...await res.json()};
   };
   const rows=()=>db.prepare('SELECT * FROM doppio_orders ORDER BY created_at').all();
   const admin=async()=>{
     const req=new Request(origin+'/api/admin/orders');
     const res=await adminOrdersApi(req,env,new URL(req.url));
-    return {status:res.status,...await res.json()};
+    return {httpStatus:res.status,...await res.json()};
   };
   return {db,env,makeBody,add,rows,admin,close:()=>db.close()};
 }
@@ -51,7 +51,7 @@ test('uma pizza não dá brinde (também não altera preço)',async()=>{
   const h=createHarness();
   try{
     const result=await h.add(h.makeBody([pizza('calabresa')]));
-    assert.equal(result.status,200);
+    assert.equal(result.httpStatus,200);
     const [order]=h.rows();
     assert.equal(order.promo_soda_variant,null);
     assert.equal(order.subtotal_cents,4999);
@@ -63,14 +63,14 @@ test('duas pizzas ativam 1 Pepsi 2L, inclusive qty=2 no mesmo sabor',async()=>{
   const h=createHarness();
   try{
     const result=await h.add(h.makeBody([pizza('calabresa',2)]));
-    assert.equal(result.status,200);
+    assert.equal(result.httpStatus,200);
     const [row]=h.rows();
     assert.equal(row.promo_soda_variant,'pepsi');
     assert.equal(row.subtotal_cents,9998);
     assert.equal(row.total_cents,10498);
     assert.equal(JSON.parse(row.items_json).length,1);
     const panel=await h.admin();
-    assert.equal(panel.status,200);
+    assert.equal(panel.httpStatus,200);
     assert.equal(panel.orders[0].promoSodaLabel,'Pepsi 2 litros');
   }finally{h.close()}
 });
@@ -78,7 +78,7 @@ test('Pepsi Zero 2L é gravada e aparece no painel sem cobrar brinde',async()=>{
   const h=createHarness();
   try{
     const result=await h.add(h.makeBody([pizza('calabresa'),pizza('frango')],{promoSodaVariant:'pepsi-zero'}));
-    assert.equal(result.status,200);
+    assert.equal(result.httpStatus,200);
     const row=h.rows()[0];
     assert.equal(row.promo_soda_variant,'pepsi-zero');
     assert.equal(row.subtotal_cents,10498);
@@ -91,9 +91,9 @@ test('meio a meio é uma pizza; duas metades NÃO ativam brinde sozinhas',async(
   const h=createHarness();
   try{
     const one=await h.add(h.makeBody([half('calabresa','frango')]));
-    assert.equal(one.status,200);
+    assert.equal(one.httpStatus,200);
     const two=await h.add(h.makeBody([half('calabresa','frango'),pizza('calabresa')],{promoSodaVariant:'pepsi-zero'}));
-    assert.equal(two.status,200);
+    assert.equal(two.httpStatus,200);
     const results=h.rows().map(x=>x.promo_soda_variant);
     assert.equal(results.filter(x=>x===null).length,1);
     assert.equal(results.filter(x=>x==='pepsi-zero').length,1);
@@ -102,9 +102,9 @@ test('meio a meio é uma pizza; duas metades NÃO ativam brinde sozinhas',async(
 test('pizzas doces entram na oferta e nenhuma pizza indisponível pode ser pedida',async()=>{
   const h=createHarness();
   try{
-    assert.equal((await h.add(h.makeBody([half('uva-nevada','chocolate-uva'),pizza('uva-nevada')]))).status,200);
+    assert.equal((await h.add(h.makeBody([half('uva-nevada','chocolate-uva'),pizza('uva-nevada')]))).httpStatus,200);
     assert.equal(h.rows()[0].promo_soda_variant,'pepsi');
-    assert.equal((await h.add(h.makeBody([pizza('chocolate-morango',2)]))).status,422);
+    assert.equal((await h.add(h.makeBody([pizza('chocolate-morango',2)]))).httpStatus,422);
     assert.equal(h.rows().length,1);
   }finally{h.close()}
 });
@@ -112,7 +112,7 @@ test('seis pizzas continuam dando uma garrafa por pedido e sem alteração de va
   const h=createHarness();
   try{
     const result=await h.add(h.makeBody([pizza('calabresa',6)],{promoSodaVariant:'pepsi-zero'}));
-    assert.equal(result.status,200);
+    assert.equal(result.httpStatus,200);
     assert.equal(h.rows()[0].total_cents,6*4999+500);
     assert.equal(h.rows()[0].promo_soda_variant,'pepsi-zero');
   }finally{h.close()}
@@ -120,10 +120,11 @@ test('seis pizzas continuam dando uma garrafa por pedido e sem alteração de va
 test('servidor rejeita brinde forjado com menos de duas pizzas e variante inexistente',async()=>{
   const h=createHarness();
   try{
+    await ensureOrdersDb(h.env);
     const one=await h.add(h.makeBody([pizza('calabresa')],{promoSodaVariant:'pepsi-zero'}));
-    assert.equal(one.status,422);
+    assert.equal(one.httpStatus,422);
     const fake=await h.add(h.makeBody([pizza('calabresa',2)],{promoSodaVariant:'outra-marca'}));
-    assert.equal(fake.status,422);
+    assert.equal(fake.httpStatus,422);
     assert.equal(h.rows().length,0);
   }finally{h.close()}
 });
@@ -132,7 +133,7 @@ test('pedido duplicado não gera uma segunda Pepsi, nem um segundo registro',asy
   try{
     const body=h.makeBody([pizza('calabresa',2)],{promoSodaVariant:'pepsi-zero'});
     const a=await h.add(body),b=await h.add(body);
-    assert.equal(a.status,200);assert.equal(b.status,200);
+    assert.equal(a.httpStatus,200);assert.equal(b.httpStatus,200);
     assert.equal(a.reference,b.reference);assert.equal(h.rows().length,1);
   }finally{h.close()}
 });
@@ -146,7 +147,7 @@ test('migração adiciona coluna ao banco antigo sem apagar pedidos existentes',
     assert.equal(h.rows().length,1);
     assert.equal(h.rows()[0].reference,'DP-OLD');
     assert.equal(h.rows()[0].promo_soda_variant,null);
-    assert.equal((await h.add(h.makeBody([pizza('calabresa',2)]))).status,200);
+    assert.equal((await h.add(h.makeBody([pizza('calabresa',2)]))).httpStatus,200);
     assert.equal(h.rows().length,2);
   }finally{h.close()}
 });
