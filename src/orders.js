@@ -12,6 +12,10 @@ const STATUS_LABELS={
   cancelado:'Cancelado'
 };
 const KEEP_DAYS=90;
+const PROMO_MIN_PIZZAS=2;
+const PROMO_SODA_VARIANTS=Object.freeze({pepsi:'Pepsi 2 litros','pepsi-zero':'Pepsi Zero 2 litros'});
+const PROMO_ENABLED=true; // Oferta ativa: 1 brinde por pedido com 2+ pizzas, doces e meio a meio inclusos.
+const promoDrinkName=variant=>PROMO_SODA_VARIANTS[variant]||null;
 const orderReadyPromises=new WeakMap();
 const json=(obj,status=200)=>new Response(JSON.stringify(obj),{
   status,headers:{
@@ -47,7 +51,8 @@ export async function ensureOrdersDb(env){
       const columns=new Set((meta.results||[]).map(row=>row.name));
       for(const [column,definition] of [
         ['customer_phone',"TEXT NOT NULL DEFAULT ''"],
-        ['paid_amount_cents','INTEGER']
+        ['paid_amount_cents','INTEGER'],
+        ['promo_soda_variant','TEXT']
       ]){
         if(!columns.has(column)){
           try{await env.DOPPIO_DB.prepare('ALTER TABLE doppio_orders ADD COLUMN '+column+' '+definition).run();}
@@ -143,13 +148,22 @@ function validateOrder(input,shop){
     if(input.shippingFee!==expectedFee)throw Error('Frete desatualizado. Recalcule o CEP.');
     shippingCents=cents(input.shippingFee);
   }
+  // A quantidade total de pizzas usa qty; cada meio a meio é uma pizza inteira.
+  const promoEligible=PROMO_ENABLED&&count>=PROMO_MIN_PIZZAS;
+  if(input.promoSodaVariant!==undefined&&input.promoSodaVariant!==null&&
+     !Object.hasOwn(PROMO_SODA_VARIANTS,input.promoSodaVariant))
+    throw Error('Escolha Pepsi 2 litros ou Pepsi Zero 2 litros para o brinde.');
+  if(!promoEligible&&input.promoSodaVariant!=null)
+    throw Error('O refrigerante grátis exige pelo menos duas pizzas no mesmo pedido.');
+  // Compatibilidade com carrinhos antigos: brinde padrão é Pepsi tradicional.
+  const promoSodaVariant=promoEligible?(input.promoSodaVariant||'pepsi'):null;
   return {
     clientKey:input.clientKey.toLowerCase(),customerName:trim(input.name,70),customerPhone:phone,cep:input.cep,
     address:trim(input.address,230),number:trim(input.number,7),complement:trim(input.complement,65),
     payment:trim(input.payment,80),notes:customerCourier?('[TRANSPORTE POR APLICATIVO CONTRATADO E PAGO PELO CLIENTE APÓS CONFIRMAÇÃO DA PIZZARIA] '+trim(input.notes,210)).trim():trim(input.notes,300),
     items,subtotalCents:sum,shippingCents,
     totalCents:shippingCents===null?null:sum+shippingCents,
-    distanceKm,hasCustomization
+    distanceKm,hasCustomization,promoSodaVariant
   };
 }
 function publicReceipt(row){
@@ -182,11 +196,11 @@ export async function createOrder(req,env,url,shop,store){
     const id=crypto.randomUUID();
     const reference='DP-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+id.slice(0,8).toUpperCase();
     await env.DOPPIO_DB.prepare('INSERT INTO doppio_orders '
-      +'(id,reference,client_key,created_at,updated_at,status,customer_name,customer_phone,cep,address,address_number,complement,payment,notes,items_json,subtotal_cents,shipping_cents,total_cents,distance_km,has_customization,ip_key) '
-      +'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      +'(id,reference,client_key,created_at,updated_at,status,customer_name,customer_phone,cep,address,address_number,complement,payment,notes,items_json,subtotal_cents,shipping_cents,total_cents,distance_km,has_customization,ip_key,promo_soda_variant) '
+      +'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
       .bind(id,reference,order.clientKey,now,now,'novo',order.customerName,order.customerPhone,order.cep,order.address,order.number,
         order.complement,order.payment,order.notes,JSON.stringify(order.items),order.subtotalCents,
-        order.shippingCents,order.totalCents,order.distanceKm,order.hasCustomization?1:0,ipKey).run();
+        order.shippingCents,order.totalCents,order.distanceKm,order.hasCustomization?1:0,ipKey,order.promoSodaVariant).run();
     return json(publicReceipt({reference}));
   }catch(e){
     if(String(e?.message||'').includes('UNIQUE constraint failed')){
@@ -204,7 +218,8 @@ function safeOrder(row){
     address:row.address,number:row.address_number,complement:row.complement,
     payment:row.payment,notes:row.notes,items:JSON.parse(row.items_json),
     subtotalCents:row.subtotal_cents,shippingCents:row.shipping_cents,totalCents:row.total_cents,
-    distanceKm:row.distance_km,hasCustomization:!!row.has_customization,paidAmountCents:Number.isInteger(row.paid_amount_cents)?row.paid_amount_cents:null
+    distanceKm:row.distance_km,hasCustomization:!!row.has_customization,paidAmountCents:Number.isInteger(row.paid_amount_cents)?row.paid_amount_cents:null,
+    promoSodaVariant:row.promo_soda_variant||null,promoSodaLabel:promoDrinkName(row.promo_soda_variant)
   };
 }
 export async function adminOrdersApi(req,env,url){
@@ -214,7 +229,7 @@ export async function adminOrdersApi(req,env,url){
     try{
       // Retenção é aplicada pelo cron diário; evitar DELETE repetido a cada atualização de 10 segundos.
       const [rows,groups]=await Promise.all([
-        env.DOPPIO_DB.prepare('SELECT id,reference,status,created_at,updated_at,customer_name,customer_phone,cep,address,address_number,complement,payment,notes,items_json,subtotal_cents,shipping_cents,total_cents,distance_km,has_customization,paid_amount_cents FROM doppio_orders ORDER BY created_at DESC LIMIT 100').all(),
+        env.DOPPIO_DB.prepare('SELECT id,reference,status,created_at,updated_at,customer_name,customer_phone,cep,address,address_number,complement,payment,notes,items_json,subtotal_cents,shipping_cents,total_cents,distance_km,has_customization,paid_amount_cents,promo_soda_variant FROM doppio_orders ORDER BY created_at DESC LIMIT 100').all(),
         env.DOPPIO_DB.prepare('SELECT status,COUNT(*) AS total FROM doppio_orders GROUP BY status').all()
       ]);
       const stats=Object.fromEntries(STATUSES.map(status=>[status,0]));
