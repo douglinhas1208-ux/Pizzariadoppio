@@ -3,5 +3,5 @@
   'use strict';
   const banner = document.getElementById('promo-duas-pizzas');
   if (!banner) return;
-  banner.hidden = window.DOPPIO_CONFIG?.promotion?.twoPizzasSodaBannerEnabled !== true;
+  banner.hidden = window.DOPPIO_CONFIG?.promotion?.enabled !== true || window.DOPPIO_CONFIG?.promotion?.twoPizzasSodaBannerEnabled !== true;
 })();

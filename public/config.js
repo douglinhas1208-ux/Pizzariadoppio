@@ -35,7 +35,11 @@ window.DOPPIO_CONFIG = {
     requireDeliveryAddress: true // impede enviar pedido sem endereço
   },
   // Coloque false para ocultar o banner promocional sem alterar o catálogo.
-  promotion: { twoPizzasSodaBannerEnabled: true },
+  promotion: {
+    enabled: true, // 1 Pepsi 2 L ou Pepsi Zero 2 L grátis por pedido com 2+ pizzas.
+    twoPizzasSodaBannerEnabled: true, // Esta opção controla somente a visibilidade do banner.
+    minimumPizzas: 2, bottlesPerOrder: 1
+  },
   products: [
     {id:'frango', name:'Frango com Catupiry', description:'Frango e Catupiry.', ingredients:['Massa','Molho de tomate','Frango','Catupiry','Azeitonas'], category:'Clássicas', image:'assets/frango-real-2026.webp', price:54.99, available:true, tag:'Clássica'},
     {id:'brocolis', name:'Brócolis com Bacon', description:'Brócolis, bacon e Catupiry.', ingredients:['Massa','Molho de tomate','Brócolis','Bacon','Catupiry'], category:'Clássicas', image:'assets/brocolis.webp', price:54.99, available:true, tag:'Clássica'},

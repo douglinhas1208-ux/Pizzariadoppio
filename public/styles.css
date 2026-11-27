@@ -313,3 +313,22 @@ body.doppio-map-open{overflow:hidden}
 /* Fotografias reais 2026: enquadradas em 960×540, sem ampliação artificial nem corte de pizza. */
 .pizza-card .pizza-image>img[src$="real-2026.webp"]{object-fit:cover;object-position:center;transform:none}
 .pizza-card:hover .pizza-image>img[src$="real-2026.webp"]{transform:scale(1.025)}
+
+/* Promoção duas pizzas — progresso e escolha da Pepsi 2 L no carrinho. */
+.cart-promo-progress{margin:13px 0 4px;padding:12px 13px;border-radius:11px;background:#fff2df;border:1px dashed #eca76f;color:#81411e;font-size:.81rem;font-weight:650;line-height:1.5}
+.cart-promo-gift{margin:14px 0 4px;border-radius:13px;background:#fff3e8;border:1px solid #f2be99;padding:13px;box-shadow:0 7px 18px #5d32100a}
+.cart-promo-gift-heading{display:flex;align-items:center;gap:10px}
+.cart-promo-gift-heading>span{font-size:1.9rem}
+.cart-promo-gift-heading strong{display:block;font-size:.87rem;color:#442614;line-height:1.35}
+.cart-promo-gift-heading small{display:block;margin-top:3px;color:#c45322;font-size:.7rem;font-weight:850}
+.cart-promo-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.cart-promo-choice{display:flex;gap:8px;align-items:center;padding:10px 8px;border-radius:9px;border:1px solid #e6c7b4;background:#fff;color:#463427;font-size:.74rem;font-weight:750;min-width:0;cursor:pointer}
+.cart-promo-choice:has(input:checked){border-color:#df783b;background:#ffdfc5;box-shadow:0 0 0 1px #e77d4038}
+.cart-promo-choice input{accent-color:#dc632b;flex:0 0 auto}
+.cart-promo-choice span{overflow-wrap:anywhere}
+.cart-promo-gift>p{font-size:.67rem;color:#886348;margin:9px 0 0;line-height:1.4}
+.review-promo-gift{display:flex;align-items:center;gap:13px;margin:12px 0 19px;padding:13px 16px;border:1px solid #f0bd8c;background:#fff3e5;border-radius:12px;color:#58341e}
+.review-promo-gift>span{font-size:1.7rem}
+.review-promo-gift strong{display:block;font-size:.91rem}
+.review-promo-gift small{display:block;font-size:.73rem;margin-top:4px;color:#805a3f}
+@media(max-width:390px){.cart-promo-choices{grid-template-columns:1fr}.cart-promo-choice{min-height:39px}}

@@ -16,3 +16,6 @@
 @media(max-width:1000px){.promo-card{grid-template-columns:155px minmax(0,1fr);gap:16px}.promo-photo{min-height:185px}.promo-action{grid-column:2;padding:0 20px 17px 0;margin-top:-11px}.promo-copy{padding:17px 18px 12px 0}.promo-drink{font-size:1.9rem}.promo-action .button{padding:10px 14px}}
 @media(max-width:600px){.promo-section{padding-top:16px}.promo-card{grid-template-columns:99px minmax(0,1fr);gap:12px;border-radius:16px;min-height:0}.promo-photo{min-height:205px}.promo-photo img{object-position:center}.promo-copy{padding:13px 13px 0 0}.promo-label{font-size:.53rem;padding:5px 8px;letter-spacing:.07em}.promo-copy h2{font-size:clamp(1.08rem,4.7vw,1.5rem);line-height:1.2;margin:9px 0 7px}.promo-copy p{font-size:.66rem;line-height:1.4}.promo-action{grid-column:2;gap:6px;padding:2px 12px 12px 0;margin:0}.promo-drink{font-size:1.5rem}.promo-action .button{font-size:.7rem;padding:10px 11px;gap:6px}}
 @media(max-width:370px){.promo-card{grid-template-columns:82px minmax(0,1fr);gap:9px}.promo-copy h2{font-size:1.03rem}.promo-action .button{font-size:.66rem}}
+
+/* Banner fixo, sem pop-up, mantendo as cores da Doppio. */
+.promo-copy p{line-height:1.55;max-width:580px}
