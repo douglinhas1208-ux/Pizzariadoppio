@@ -182,3 +182,17 @@ A oferta de uma Pepsi 2 L ou Pepsi Zero 2 L na compra de 2 pizzas está temporar
 
 
 Build de pausa da promoção: código implantável na branch main em 27/11/2026. O Worker deve publicar a versão com oferta desativada e sem mudanças no banco.
+
+
+### Importação de cupons fiscais na Gestão Empresarial — 27/11/2026
+
+O painel administrativo ganhou a seção **Importar cupom fiscal** (na aba Gestão Empresarial). O processo é seguro e exige login no Admin:
+
+1. Transcrever e conferir cada item do cupom em JSON estruturado. O Worker **não faz OCR**; arquivos JSON são preparados de forma assistida a partir das fotos encaminhadas pelo proprietário.
+2. Na aba Gestão Empresarial, carregar o arquivo JSON e conferir fornecedor, data, produtos, quantidades e total.
+3. Clicar em **Confirmar lançamento do cupom**. A API `/api/admin/management/receipts/import` cria uma despesa no financeiro e movimentos individuais de entrada em estoque na mesma transação D1.batch. O comprovante fica registrado pelo seu identificador único.
+4. A reimportação do mesmo comprovante não duplica despesas nem movimentações. Se o valor divergir para o mesmo identificador, a API bloqueia.
+5. O estoque de nomes exatos já existentes é reutilizado. Se a unidade cadastrada for g ou kg, a API converte o valor; garrafas são controladas em unidades, salvo se o cadastro existente estiver em litros/mililitros. Os preços do último lote atualizam a referência de custo, sem modificar fichas técnicas ou preços de venda.
+6. O cupom pode conter um total cujo valor de linha difere em centavos do produto matemático de preço unitário e peso; prevalece o total da linha efetivamente impresso.
+
+**Privacidade:** os valores privados do cupom não são incorporados ao código público; o conteúdo JSON é enviado do navegador autenticado direto à API protegida. Em produção, confirmar os lançamentos acessando o admin; não alegar importação real antes dessa confirmação.
