@@ -174,3 +174,8 @@ A interface e API foram homologadas com dez testes de SQLite em memória e simul
 - A tabela `doppio_orders` ganha a coluna opcional `promo_soda_variant` por migração aditiva. Pedidos históricos e relatórios financeiros mantêm seus valores e quantidades. No admin, o brinde aparece com valor R$ 0,00.
 - `promotion.enabled` no config.js controla a experiência pública. `promotion.twoPizzasSodaBannerEnabled` controla **somente o banner**; o desligamento real da promoção também deve acompanhar a regra `PROMO_ENABLED` no servidor (src/orders.js). Evitar alterar apenas um dos lados.
 - Homologação: `node --test tests/promotion.test.mjs` e `node --test tests/management.test.mjs` com Node 22+ e banco SQLite isolado; simulação do carrinho, escolha Pepsi Zero, checkout, API e painel via navegador.
+
+
+### Promoção Pepsi 2L temporariamente pausada — 27/11/2026
+
+A oferta de uma Pepsi 2 L ou Pepsi Zero 2 L na compra de 2 pizzas está temporariamente indisponível, sem data de retorno definida. O banner fica oculto, o carrinho e a mensagem do WhatsApp deixam de anunciar o brinde e o servidor não atribui refrigerante aos novos pedidos. Páginas antigas que enviem a escolha de bebida não impedem a finalização: a opção é ignorada enquanto a promoção estiver pausada. Pedidos anteriores que receberam Pepsi continuam preservados no painel. Para reativar, ajustar em conjunto public/config.js (promotion.enabled e twoPizzasSodaBannerEnabled) e src/orders.js (PROMO_ENABLED), após testes. Backup do código com a promoção ativa: backup/promocao-ativa-2026-11-27.
