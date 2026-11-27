@@ -316,11 +316,13 @@
           +'<div><small>Forma de pagamento</small><strong>'+esc(o.payment)+'</strong></div>'
           +'<div class="order-wide"><small>Endereço de entrega</small><strong>'+esc(addr)+'</strong></div>'
           +(o.notes?'<div class="order-wide"><small>Observações gerais</small><strong>'+esc(o.notes)+'</strong></div>':'')
+          +(o.promoSodaLabel?'<div class="order-wide order-promo-gift"><small>🎁 Brinde da promoção</small><strong>1 '+esc(o.promoSodaLabel)+' · GRÁTIS · R$ 0,00</strong></div>':'')
           +'</div>'
           +'<ul class="order-items">'+list+'</ul>'
           +'<div class="order-amounts">'
             +'<span>Pizzas (preço base) <strong>'+orderMoney(o.subtotalCents)+'</strong></span>'
             +'<span>Frete estimado <strong>'+orderMoney(o.shippingCents)+'</strong></span>'
+            +(o.promoSodaLabel?'<span>🎁 1 '+esc(o.promoSodaLabel)+' <strong>GRÁTIS</strong></span>':'')
             +'<span>Total '+(o.hasCustomization?'base estimado':'estimado')+' <strong>'+total+'</strong></span>'
           +'</div>'
           +'<div class="order-actions"><label>Atualizar status<select data-order-status="'+esc(o.id)+'">'
@@ -349,7 +351,9 @@
       concluido:'Seu pedido '+id+' foi marcado como concluído. Obrigado por escolher a Doppio Pizzas! 🍕',
       cancelado:'Sobre o pedido '+id+': registramos o cancelamento. Se precisar de ajuda, responda por aqui.'
     };
-    return prefix+(notes[order.status]||notes.novo)+'\n\nMensagem preparada pelo painel. Confira antes de enviar.';
+    const gift=order.promoSodaLabel&&order.status!=='cancelado'
+      ?'\n🎁 Brinde do pedido: 1 '+order.promoSodaLabel+' grátis, sujeito à disponibilidade.':'';
+    return prefix+(notes[order.status]||notes.novo)+gift+'\n\nMensagem preparada pelo painel. Confira antes de enviar.';
   }
   function parseReceivedValue(text){
     const clean=String(text||'').replace(/^R\$\s*/i,'').trim();
