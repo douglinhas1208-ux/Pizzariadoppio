@@ -226,6 +226,7 @@ window.addEventListener('doppio:admin-ready',()=>{
 window.addEventListener('doppio:inventory:visible',()=>{
   if(!data)void load();
 });
+window.addEventListener('doppio:receipt:imported',()=>{void load();});
 // Garante carregamento ao abrir diretamente /admin#estoque, mesmo que a autenticação
 // termine antes de este script registrar os listeners.
 if($('admin-dashboard')?.dataset.view==='stock'&&!$('admin-dashboard').hidden)void load();

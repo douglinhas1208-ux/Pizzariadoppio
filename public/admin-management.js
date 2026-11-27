@@ -252,6 +252,7 @@ $('management-goal-form').addEventListener('submit',async event=>{
   }catch(e){status(e.message,true);}
 });
 window.addEventListener('doppio:management:visible',()=>{void load();});
+window.addEventListener('doppio:receipt:imported',()=>{void load(true);});
 window.addEventListener('doppio:admin-ready',()=>{
   if($('admin-dashboard')?.dataset.view==='management')void load();
 });

@@ -387,3 +387,12 @@
   .mgmt-expense-filters{width:100%}
   .mgmt-expense-filters .mgmt-search-label{min-width:0;flex:1}
 }
+
+/* Importação de cupom fiscal com prévia e confirmação explícita */
+.mgmt-receipt-box{background:#fffbf4;border:1px solid #efdcca;border-radius:14px;padding:18px;margin:16px 0}
+.receipt-upload-label{display:flex;flex-direction:column;gap:8px;font-size:.8rem;font-weight:800;color:#5c4231;margin:13px 0}
+.receipt-upload-label input{max-width:100%;background:white;border:1px dashed #d79e76;border-radius:10px;padding:10px;color:#4c3627;cursor:pointer}
+.receipt-preview-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:14px 0 10px;color:#3c281c}
+.receipt-preview-head strong:last-child{color:#ad572e;font-size:1.15rem}
+#receipt-import-preview[hidden]{display:none!important}
+#receipt-import-confirm{margin-top:12px}

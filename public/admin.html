@@ -7,10 +7,11 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#211b16">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/admin.css?v=despesas-2">
+  <link rel="stylesheet" href="/admin.css?v=cupons-1">
   <script src="/admin.js?v=pepsi2l-v1" defer></script>
   <script src="/admin-inventory.js" defer></script>
-  <script src="/admin-management.js?v=despesas-2" defer></script>
+  <script src="/admin-management.js?v=cupons-1" defer></script>
+  <script src="/admin-receipts.js?v=cupons-1" defer></script>
   <title>Painel administrativo | Doppio Pizzas</title>
 </head>
 <body>
@@ -325,6 +326,23 @@
             <div class="stock-subhead"><h4>Resumo de pedidos do mês</h4><small>Inclui todas as solicitações, mas só considera vendas as que estão em preparo, entrega ou concluídas.</small></div>
             <div id="management-orders" class="mgmt-pills"></div>
           </div>
+          <section class="mgmt-receipt-box stock-subsection" id="management-receipt-import" aria-labelledby="receipt-import-head">
+            <div class="stock-subhead">
+              <div><h4 id="receipt-import-head">🧾 Importar cupom fiscal</h4><small>Envie o arquivo preparado a partir da foto, confira tudo e registre a compra em uma única operação.</small></div>
+            </div>
+            <label class="receipt-upload-label" for="receipt-import-upload">Arquivo do cupom (.json)
+              <input type="file" id="receipt-import-upload" accept=".json,application/json">
+            </label>
+            <p id="receipt-import-message" class="stock-hint" role="status" aria-live="polite">Selecione o arquivo do cupom para conferir os produtos e valores.</p>
+            <div id="receipt-import-preview" hidden>
+              <div class="receipt-preview-head"><strong id="receipt-import-title"></strong><strong id="receipt-import-total"></strong></div>
+              <div class="stock-table-scroll"><table class="stock-table">
+                <thead><tr><th>Produto</th><th>Quantidade</th><th>Valor na nota</th></tr></thead>
+                <tbody id="receipt-import-items"></tbody></table></div>
+              <p class="stock-hint">Ao confirmar: uma despesa no financeiro e entradas separadas no estoque. Repetir a mesma nota não cria duplicação.</p>
+              <button id="receipt-import-confirm" type="button" class="admin-button admin-button-primary" disabled>Confirmar lançamento do cupom</button>
+            </div>
+          </section>
           <div class="stock-subsection mgmt-expense-hub" id="management-expense-hub">
             <div class="mgmt-expense-header">
               <div>

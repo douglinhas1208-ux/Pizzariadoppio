@@ -51,8 +51,9 @@
       }else{
         msg('Cupom registrado: '+money(data.totalCents)+' em uma despesa e '+data.stockMovements+' entradas no estoque.');
       }
+      const importedDate=receipt.date;
       clear();
-      window.dispatchEvent(new CustomEvent('doppio:receipt:imported',{detail:{date:receipt?.date}}));
+      window.dispatchEvent(new CustomEvent('doppio:receipt:imported',{detail:{date:importedDate}}));
     }catch(e){msg('Importação não concluída: '+e.message,true);}
     finally{submitting=false;$('receipt-import-confirm').disabled=!receipt;}
   });
