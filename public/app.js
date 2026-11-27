@@ -62,7 +62,12 @@
     return null;
   };
   let cart = [];
-  const promoEligible = () => cfg.promotion?.twoPizzasSodaBannerEnabled === true && cart.reduce((n,item) => n + item.qty, 0) >= 2;
+  const promoEnabled = () => cfg.promotion?.enabled === true;
+  const pizzaCount = () => cart.reduce((n,item) => n + item.qty, 0);
+  const promoEligible = () => promoEnabled() && pizzaCount() >= 2;
+  const promoDrinkOptions = Object.freeze({pepsi:'Pepsi 2 litros','pepsi-zero':'Pepsi Zero 2 litros'});
+  let promoDrink='pepsi';
+  const promoDrinkLabel=()=>promoDrinkOptions[promoDrink]||promoDrinkOptions.pepsi;
   try {
     const stored = JSON.parse(localStorage.getItem('doppio-cart-v2') || localStorage.getItem('doppio-cart-v1') || '[]');
     if (Array.isArray(stored)) cart = stored.map(normalizeItem).filter(Boolean).slice(0,40);
@@ -233,7 +238,18 @@
       <div class="summary-row"><span data-delivery-label>${validPrice(s.fee)?'Frete pelo CEP (estimado)':'Taxa de entrega'}</span><strong data-delivery-fee>${s.outOfArea?'Fora da área':validPrice(s.fee)?money(s.fee):'A calcular'}</strong></div>
       <div class="summary-row summary-total"><span data-order-total-label>Total estimado</span><strong data-order-total>${s.total===null?'A confirmar':money(s.total)}</strong></div>
       <div class="cart-pending" data-delivery-pending>${shipping.status==='ready'?'Frete estimado pelo CEP. Valores sujeitos à conferência do endereço e alterações de ingredientes.':'Informe o CEP para consultar o frete automático.'}</div>`:'';
-    const promoNotice=promoEligible()?'<p class="cart-pending" role="note">🎁 Promoção ativa: 1 refrigerante grátis na compra de 2 pizzas. Confirme o brinde no WhatsApp.</p>':'';
+    const promoNotice=promoEligible()
+      ? `<div class="cart-promo-gift" role="group" aria-label="Escolha do refrigerante grátis">
+           <div class="cart-promo-gift-heading"><span aria-hidden="true">🎁</span><div><strong>Você ganhou 1 refrigerante 2 L!</strong><small>GRÁTIS · R$ 0,00 no pedido</small></div></div>
+           <div class="cart-promo-choices">
+             <label class="cart-promo-choice"><input type="radio" name="{prefix}-soda" data-promo-drink value="pepsi" ${promoDrink==='pepsi'?'checked':''}><span>Pepsi 2 L</span></label>
+             <label class="cart-promo-choice"><input type="radio" name="{prefix}-soda" data-promo-drink value="pepsi-zero" ${promoDrink==='pepsi-zero'?'checked':''}><span>Pepsi Zero 2 L</span></label>
+           </div>
+           <p>1 garrafa por pedido com pelo menos 2 pizzas · opção sujeita à disponibilidade na confirmação.</p>
+         </div>`
+      :promoEnabled()&&pizzaCount()===1
+        ?'<div class="cart-promo-progress" role="note">🎁 Falta só <strong>1 pizza</strong> para ganhar uma Pepsi 2 L grátis!</div>'
+        :'';
     const fields=cart.length?`<form class="order-form" onsubmit="return false">
       <label for="{prefix}-name">Seu nome <span class="required-mark">*</span></label>
       <input id="{prefix}-name" data-field="name" autocomplete="name" maxlength="70" placeholder="Como podemos chamar você?" value="${esc(form.name)}" required>
@@ -372,7 +388,7 @@
         <div class="review-section-heading"><h3>🍕 Suas pizzas</h3><span>${stats.count} ${stats.count===1?'item':'itens'}</span></div>
         <div class="review-products">${list}</div>
       </section>
-      ${promoEligible()?'<p class="review-terms">🎁 <strong>Brinde da Doppio:</strong> 1 refrigerante grátis pela compra de 2 pizzas. Confirmar no atendimento.</p>':''}
+      ${promoEligible()?`<div class="review-promo-gift"><span aria-hidden="true">🎁</span><div><strong>Brinde grátis: 1 ${esc(promoDrinkLabel())}</strong><small>R$ 0,00 · confirmar disponibilidade no atendimento.</small></div></div>`:''}
       <section class="review-section" aria-label="Informações de entrega">
         <div class="review-section-heading"><h3>📍 Entrega</h3><span>Confira o endereço</span></div>
         <div class="review-data-pair"><small>Nome</small><strong>${esc(form.name.trim())}</strong></div>
@@ -431,7 +447,7 @@
       const snapshot={
         clientKey:checkoutKey,name:form.name.trim(),phone:phoneDigits(),cep:cepDigits(),address:form.address.trim(),
         number:form.numero.trim(),complement:form.complemento.trim(),payment:form.payment,
-        notes:form.notes.trim(),items:cart.map(i=>i.type==='half'
+        notes:form.notes.trim(),...(promoEligible()?{promoSodaVariant:promoDrink}:{}),items:cart.map(i=>i.type==='half'
           ? {type:'half',a:i.a,b:i.b,qty:i.qty,note:i.note||''}
           : {type:'pizza',id:i.id,qty:i.qty,note:i.note||''}),
         shippingFee:shipping.status==='ready'&&validPrice(shipping.quote?.fee)?shipping.quote.fee:null,
@@ -475,7 +491,7 @@
         ...(i.note?['   ✎ Observação: '+i.note]:[])
       ]),
       '',
-      ...(promoEligible()?['🎁 Promoção Doppio: 1 refrigerante grátis na compra de 2 pizzas. Confirmar brinde no atendimento.','']:[]),
+      ...(promoEligible()?['🎁 *PROMOÇÃO DOPPIO: 1 '+promoDrinkLabel()+' GRÁTIS (2+ pizzas)* · R$ 0,00 · sujeito à confirmação de disponibilidade.','']:[]),
       'Subtotal: '+(stats.pending?'a confirmar':money(stats.subtotal)),
       'Distância de referência do CEP: '+(validPrice(stats.km)?displayKm(stats.km)+' km':'a confirmar'),
       ...(stats.customerCourier?[
@@ -565,6 +581,12 @@
   };
   document.addEventListener('input',updateField);
   document.addEventListener('change',event=>{
+    if(event.target.matches('[data-promo-drink]')){
+      if(!promoEligible()||!Object.hasOwn(promoDrinkOptions,event.target.value))return;
+      promoDrink=event.target.value;checkoutKey=null;
+      document.querySelectorAll('[data-promo-drink]').forEach(el=>{el.checked=el.value===promoDrink;});
+      return;
+    }
     if(event.target.matches('[data-courier-consent]')){shipping.customerCourier=shipping.status==='outside'&&shipping.outsideEligible&&event.target.checked;checkoutKey=null;updateDeliveryLive();return;}
     if(event.target.dataset?.field==='payment'){form.payment=event.target.value;checkoutKey=null;}
   });
